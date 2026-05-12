@@ -3,5 +3,17 @@
 version = 4
 
 [[package]]
-name = "music-player-firmware"
+name = "app-core"
+version = "0.1.0"
+
+[[package]]
+name = "app-firmware"
+version = "0.1.0"
+
+[[package]]
+name = "app-hal"
+version = "0.1.0"
+
+[[package]]
+name = "app-mock"
 version = "0.1.0"

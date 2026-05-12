@@ -1,6 +1,6 @@
 [workspace]
-members = ["app-hal", "app-core", "app-firmware"]
-resolver = "2"
+members = ["app-hal", "app-core", "app-firmware", "app-mock"]
+resolver = "3"
 
 [workspace.dependencies]
 embassy-stm32    = { version = "0.1", features = ["stm32h7a3vi", "time-driver-any"] }
