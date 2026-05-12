@@ -1,0 +1,62 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "probe-rs-debug",
+      "request": "launch",
+      "name": "Debug (probe-rs) STM32L452RE",
+      "cwd": "${workspaceFolder}",
+      "chip": "STM32L452RE",
+      "flashingConfig": {
+        "flashingEnabled": true,
+        "resetAfterFlashing": true,
+        "haltAfterReset": true
+      },
+      "probe": {
+        "protocol": "Swd",
+        "speed": 8000
+      },
+      "coreConfigs": [
+        {
+          "coreIndex": 0,
+          "programBinary": "${workspaceFolder}/target/thumbv7em-none-eabihf/debug/${workspaceFolderBasename}",
+          "rttEnabled": true,
+          "rttChannelFormats": [
+            {
+              "channelNumber": 0,
+              "dataFormat": "String",
+              "showTimestamps": true
+            }
+          ]
+        }
+      ],
+      "env": {}
+    },
+    {
+      "type": "probe-rs-debug",
+      "request": "attach",
+      "name": "Attach (probe-rs) STM32L452RE",
+      "cwd": "${workspaceFolder}",
+      "chip": "STM32L452RE",
+      "probe": {
+        "protocol": "Swd",
+        "speed": 8000
+      },
+      "coreConfigs": [
+        {
+          "coreIndex": 0,
+          "programBinary": "${workspaceFolder}/target/thumbv7em-none-eabihf/debug/${workspaceFolderBasename}",
+          "rttEnabled": true,
+          "rttChannelFormats": [
+            {
+              "channelNumber": 0,
+              "dataFormat": "String",
+              "showTimestamps": true
+            }
+          ]
+        }
+      ],
+      "env": {}
+    }
+  ]
+}
