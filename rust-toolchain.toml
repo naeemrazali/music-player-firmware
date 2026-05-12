@@ -1,0 +1,4 @@
+[toolchain]
+channel    = "nightly-2025-07-01"   # Pin to a known-good nightly
+targets    = ["thumbv7em-none-eabihf"]
+components = ["rust-src", "llvm-tools-preview", "rustfmt", "clippy"]
