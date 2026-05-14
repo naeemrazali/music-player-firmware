@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 description = "Desktop simulator for the embedded audio player UI"
 
-# std is fine here — this crate only ever runs on the host machine
 [dependencies]
+app-core                     = { path = "../app-core" }
 embedded-graphics          = "0.8"
 embedded-graphics-simulator = "0.8"
