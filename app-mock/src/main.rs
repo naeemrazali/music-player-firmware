@@ -33,7 +33,10 @@ fn main() {
 
     // Keep the window open until the user closes it
     loop {
-        if window.events().any(|e| matches!(e, embedded_graphics_simulator::SimulatorEvent::Quit)) {
+        if window
+            .events()
+            .any(|e| matches!(e, embedded_graphics_simulator::SimulatorEvent::Quit))
+        {
             break;
         }
         std::thread::sleep(std::time::Duration::from_millis(33));
