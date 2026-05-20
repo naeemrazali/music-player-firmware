@@ -1,12 +1,13 @@
 use app_core::display_config::{DISPLAY_HEIGHT, DISPLAY_WIDTH, PIXEL_SCALE, PIXEL_SPACING};
-use app_core::ui::{draw_player_screen, PlayerState};
+use app_core::screens::Screen;
+use app_core::ui::draw;
 
-use embedded_graphics::pixelcolor::Rgb565;
+use embedded_graphics::pixelcolor::Gray8;
 use embedded_graphics::prelude::*;
 use embedded_graphics_simulator::{OutputSettingsBuilder, SimulatorDisplay, Window};
 
 fn main() {
-    let mut display: SimulatorDisplay<Rgb565> =
+    let mut display: SimulatorDisplay<Gray8> =
         SimulatorDisplay::new(Size::new(DISPLAY_WIDTH, DISPLAY_HEIGHT));
 
     let output_settings = OutputSettingsBuilder::new()
@@ -22,22 +23,11 @@ fn main() {
         &output_settings,
     );
 
-    let state = PlayerState {
-        track_title:  "Clair de Lune",
-        artist:       "Claude Debussy",
-        elapsed_secs: 42,
-        total_secs:   354,
-        volume:       70,
-        is_playing:   true,
+    let screen = Screen {
+        background: Gray8::new(255),
     };
 
-    draw_player_screen(
-        &mut display,
-        &state,
-        DISPLAY_WIDTH,
-        DISPLAY_HEIGHT,
-        "FLAC",
-    );
+    draw(&mut display, &screen);
 
     window.update(&display);
 
