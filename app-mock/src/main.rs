@@ -1,7 +1,5 @@
 use app_core::display_config::{DISPLAY_HEIGHT, DISPLAY_WIDTH, PIXEL_SCALE, PIXEL_SPACING};
-use app_core::screens::Screen;
-use app_core::ui::draw;
-
+use app_core::screens::{AppScreen, MainScreen};
 use embedded_graphics::pixelcolor::Gray8;
 use embedded_graphics::prelude::*;
 use embedded_graphics_simulator::{OutputSettingsBuilder, SimulatorDisplay, Window};
@@ -22,15 +20,16 @@ fn main() {
         &output_settings,
     );
 
-    let screen = Screen {
+    let current = AppScreen::Main(MainScreen {
         background: Gray8::new(0x9F),
-    };
+        title: "Clair de Lune",
+        artist: "Claude Debussy",
+    });
 
-    draw(&mut display, &screen);
+    current.draw(&mut display);
 
     window.update(&display);
 
-    // Keep the window open until the user closes it
     loop {
         if window
             .events()
