@@ -17,14 +17,13 @@ fn main() {
 
     let mut window = Window::new(
         &format!(
-            "Audio Player Simulator  —  {}×{}  ({}× scale)",
-            DISPLAY_WIDTH, DISPLAY_HEIGHT, PIXEL_SCALE
+            "Audio Player Simulator  —  {DISPLAY_WIDTH}×{DISPLAY_HEIGHT}  ({PIXEL_SCALE}× scale)"
         ),
         &output_settings,
     );
 
     let screen = Screen {
-        background: Gray8::new(255),
+        background: Gray8::new(0x9F),
     };
 
     draw(&mut display, &screen);
