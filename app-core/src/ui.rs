@@ -25,14 +25,19 @@ pub fn draw_line(
         .unwrap();
 }
 
+pub struct Label<'a> {
+    pub text:     &'a str,
+    pub position: Point,
+    pub style:    MonoTextStyle<'a, Gray8>,
+}
+
 pub fn draw_text(
     display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
-    text: &str,
-    position: Point,
-    color: Gray8,
+    label: &Label<'_>,
 ) {
-    let style = MonoTextStyle::new(&FONT_6X10, color);
-    Text::new(text, position, style).draw(display).unwrap();
+    Text::new(label.text, label.position, label.style)
+        .draw(display)
+        .unwrap();
 }
 
 pub struct List<'a> {
@@ -57,8 +62,19 @@ pub fn draw_list(
         } else {
             (list.unselected_color, list.unselected_prefix)
         };
-        draw_text(display, prefix, Point::new(list.start.x, y), color);
-        draw_text(display, item, Point::new(list.start.x + 12, y), color);
+        let prefix_label = Label {
+            text:     prefix,
+            position: Point::new(list.start.x, y),
+            style:    MonoTextStyle::new(&FONT_6X10, color),
+        };
+        draw_text(display, &prefix_label);
+
+        let item_label = Label {
+            text:     item,
+            position: Point::new(list.start.x + 12, y),
+            style:    MonoTextStyle::new(&FONT_6X10, color),
+        };
+        draw_text(display, &item_label);
     }
 }
 
