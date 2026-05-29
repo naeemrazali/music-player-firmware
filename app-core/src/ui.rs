@@ -2,7 +2,7 @@ use embedded_graphics::{
     mono_font::{MonoTextStyle, ascii::FONT_6X10},
     pixelcolor::Gray8,
     prelude::*,
-    primitives::{Circle, PrimitiveStyle, PrimitiveStyleBuilder, Rectangle, Triangle},
+    primitives::{Circle, Line, PrimitiveStyle, PrimitiveStyleBuilder, Rectangle, Triangle},
     text::Text,
 };
 
@@ -13,6 +13,18 @@ pub fn clear_background(
     display.clear(color).unwrap();
 }
 
+pub fn draw_line(
+    display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
+    line_start: Point,
+    line_end: Point,
+    style: PrimitiveStyle<Gray8>,
+) {
+    Line::new(line_start, line_end)
+        .into_styled(style)
+        .draw(display)
+        .unwrap();
+}
+
 pub fn draw_text(
     display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
     text: &str,
@@ -21,6 +33,33 @@ pub fn draw_text(
 ) {
     let style = MonoTextStyle::new(&FONT_6X10, color);
     Text::new(text, position, style).draw(display).unwrap();
+}
+
+pub struct List<'a> {
+    pub items:             &'a [&'a str],
+    pub selected:          usize,
+    pub start:             Point,
+    pub item_height:       i32,
+    pub selected_color:    Gray8,
+    pub unselected_color:  Gray8,
+    pub selected_prefix:   &'a str,
+    pub unselected_prefix: &'a str,
+}
+
+pub fn draw_list(
+    display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
+    list: &List<'_>,
+) {
+    for (i, item) in list.items.iter().enumerate() {
+        let y = list.start.y + i as i32 * list.item_height;
+        let (color, prefix) = if i == list.selected {
+            (list.selected_color, list.selected_prefix)
+        } else {
+            (list.unselected_color, list.unselected_prefix)
+        };
+        draw_text(display, prefix, Point::new(list.start.x, y), color);
+        draw_text(display, item, Point::new(list.start.x + 12, y), color);
+    }
 }
 
 pub fn draw_progress_bar(

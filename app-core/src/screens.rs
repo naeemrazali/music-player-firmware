@@ -1,6 +1,6 @@
 use embedded_graphics::pixelcolor::Gray8;
 use embedded_graphics::prelude::*;
-use embedded_graphics::primitives::Rectangle;
+use embedded_graphics::primitives::{PrimitiveStyle, Rectangle};
 
 use crate::ui;
 
@@ -82,32 +82,24 @@ impl SettingsScreen {
         display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
     ) {
         ui::clear_background(display, self.background);
-
-        // Title
         ui::draw_text(display, "Settings", Point::new(10, 20), Gray8::new(0));
+        ui::draw_line(
+            display,
+            Point::new(10, 34),
+            Point::new(230, 34),
+            PrimitiveStyle::with_stroke(Gray8::new(100), 1),
+        );
 
-        let hline = Point::new(10, 34);
-        let hline_end = Point::new(230, 34);
-        use embedded_graphics::primitives::Line;
-        Line::new(hline, hline_end)
-            .into_styled(embedded_graphics::primitives::PrimitiveStyle::with_stroke(
-                Gray8::new(100),
-                1,
-            ))
-            .draw(display)
-            .unwrap();
-
-        // List items
-        for (i, item) in self.items.iter().enumerate() {
-            let y = 46 + i as i32 * 14;
-            let color = if i == self.selected {
-                Gray8::BLACK
-            } else {
-                Gray8::new(100)
-            };
-            let prefix = if i == self.selected { "> " } else { "  " };
-            ui::draw_text(display, prefix, Point::new(10, y), color);
-            ui::draw_text(display, item, Point::new(22, y), color);
-        }
+        let list = ui::List {
+            items:            self.items,
+            selected:         self.selected,
+            start:            Point::new(10, 46),
+            item_height:      14,
+            selected_color:   Gray8::BLACK,
+            unselected_color: Gray8::new(100),
+            selected_prefix:  "> ",
+            unselected_prefix:"  ",
+        };
+        ui::draw_list(display, &list);
     }
 }
