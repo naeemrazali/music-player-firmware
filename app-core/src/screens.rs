@@ -1,4 +1,3 @@
-use embedded_graphics::mono_font::{MonoTextStyle, ascii::FONT_6X10};
 use embedded_graphics::pixelcolor::Gray8;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::{PrimitiveStyle, Rectangle};
@@ -24,8 +23,8 @@ impl AppScreen {
 
 pub struct MainScreen {
     pub background: Gray8,
-    pub title: &'static str,
-    pub artist: &'static str,
+    pub title_label: ui::Label<'static>,
+    pub artist_label: ui::Label<'static>,
     pub elapsed_ms: u32,
     pub total_ms: u32,
     pub is_playing: bool,
@@ -41,19 +40,8 @@ impl MainScreen {
     ) {
         ui::clear_background(display, self.background);
 
-        let title_label = ui::Label {
-            text:     self.title,
-            position: Point::new(10, 20),
-            style:    MonoTextStyle::new(&FONT_6X10, Gray8::BLACK),
-        };
-        ui::draw_label(display, &title_label);
-
-        let artist_label = ui::Label {
-            text:     self.artist,
-            position: Point::new(10, 36),
-            style:    MonoTextStyle::new(&FONT_6X10, Gray8::new(100)),
-        };
-        ui::draw_label(display, &artist_label);
+        ui::draw_label(display, &self.title_label);
+        ui::draw_label(display, &self.artist_label);
 
         ui::draw_progress_bar(
             display,
@@ -65,20 +53,10 @@ impl MainScreen {
         );
 
         let elapsed_str = ui::fmt_time_ms(self.elapsed_ms, &mut self.elapsed_time_buf);
-        let elapsed_label = ui::Label {
-            text:     elapsed_str,
-            position: Point::new(10, 112),
-            style:    MonoTextStyle::new(&FONT_6X10, Gray8::new(80)),
-        };
-        ui::draw_label(display, &elapsed_label);
+        ui::draw_text(display, elapsed_str, Point::new(10, 112), Gray8::new(80));
 
         let total_str = ui::fmt_time_ms(self.total_ms, &mut self.total_time_buf);
-        let total_label = ui::Label {
-            text:     total_str,
-            position: Point::new(200, 112),
-            style:    MonoTextStyle::new(&FONT_6X10, Gray8::new(80)),
-        };
-        ui::draw_label(display, &total_label);
+        ui::draw_text(display, total_str, Point::new(200, 112), Gray8::new(80));
 
         ui::draw_play_button(
             display,
@@ -101,12 +79,7 @@ impl SettingsScreen {
         display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
     ) {
         ui::clear_background(display, self.background);
-        let settings_label = ui::Label {
-            text:     "Settings",
-            position: Point::new(10, 20),
-            style:    MonoTextStyle::new(&FONT_6X10, Gray8::new(0)),
-        };
-        ui::draw_label(display, &settings_label);
+        ui::draw_text(display, "Settings", Point::new(10, 20), Gray8::new(0));
         ui::draw_line(
             display,
             Point::new(10, 34),

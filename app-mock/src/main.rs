@@ -1,5 +1,6 @@
 use app_core::display_config::{DISPLAY_HEIGHT, DISPLAY_WIDTH, PIXEL_SCALE, PIXEL_SPACING};
 use app_core::screens::{AppScreen, MainScreen, SettingsScreen};
+use embedded_graphics::mono_font::{MonoTextStyle, ascii::FONT_6X10};
 use embedded_graphics::pixelcolor::Gray8;
 use embedded_graphics::prelude::*;
 use embedded_graphics_simulator::sdl2::Keycode;
@@ -44,8 +45,16 @@ fn main() {
         let mut current = if on_main_screen {
             AppScreen::Main(MainScreen {
                 background: Gray8::new(0x9F),
-                title: "Clair de Lune",
-                artist: "Claude Debussy",
+                title_label: app_core::ui::Label {
+                    text: "Clair de Lune",
+                    position: Point::new(10, 20),
+                    style: MonoTextStyle::new(&FONT_6X10, Gray8::BLACK),
+                },
+                artist_label: app_core::ui::Label {
+                    text: "Claude Debussy",
+                    position: Point::new(10, 36),
+                    style: MonoTextStyle::new(&FONT_6X10, Gray8::new(100)),
+                },
                 elapsed_ms,
                 total_ms: 35400,
                 is_playing,
