@@ -242,14 +242,15 @@ cargo test -p app-hal -p app-core
 
 ## Milestones
 
-- [ ] **Milestone 1** simple UI on mock device
-- [ ] **Milestone 2** decode FLAC using symphonia on mock device
-- [ ] **Milestone 3** implement playlist logic
-- [ ] **Milestone 4** implement UI driver on STM32 evaluation board and show test image
-- [ ] **Milestone 5** implement simple button driver for STM32
-- [ ] **Milestone 6** embedded filesystem to read from SD card
-- [ ] **Milestone 7** AK4377 embedded driver
-- [ ] **Milestone 8** combine file read and play song on AK4377
+- [x] **Milestone 1** GUI framework + screen manager (`app-core` + `app-mock`) — screen enum, shared drawing primitives, update/draw loop, keyboard navigation
+- [ ] **Milestone 2** Player state machine + playlist logic (`app-core`, host-tested)
+- [ ] **Milestone 3** Transport controls + progress bar UI
+- [ ] **Milestone 4** FLAC decode via Symphonia (desktop end-to-end)
+- [ ] **Milestone 5** HAL traits + mocks (`app-hal`)
+- [ ] **Milestone 6** Hardware bringup (STM32 boot, LED blink, RTT logs)
+- [ ] **Milestone 7** AK4377 I2C init + SAI sine wave
+- [ ] **Milestone 8** SD card reads + raw PCM playback
+- [ ] **Milestone 9** Combine file read and play song on AK4377
 
 
 ## Running Common Tasks
