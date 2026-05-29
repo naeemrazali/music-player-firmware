@@ -26,18 +26,17 @@ pub fn draw_line(
 }
 
 pub struct Label<'a> {
-    pub text:     &'a str,
+    pub text: &'a str,
     pub position: Point,
-    pub style:    MonoTextStyle<'a, Gray8>,
+    pub style: MonoTextStyle<'a, Gray8>,
 }
 
 pub fn draw_text(
     display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
     text: &str,
     position: Point,
-    color: Gray8,
+    style: MonoTextStyle<'_, Gray8>,
 ) {
-    let style = MonoTextStyle::new(&FONT_6X10, color);
     Text::new(text, position, style).draw(display).unwrap();
 }
 
@@ -51,13 +50,13 @@ pub fn draw_label(
 }
 
 pub struct List<'a> {
-    pub items:             &'a [&'a str],
-    pub selected:          usize,
-    pub start:             Point,
-    pub item_height:       i32,
-    pub selected_color:    Gray8,
-    pub unselected_color:  Gray8,
-    pub selected_prefix:   &'a str,
+    pub items: &'a [&'a str],
+    pub selected: usize,
+    pub start: Point,
+    pub item_height: i32,
+    pub selected_color: Gray8,
+    pub unselected_color: Gray8,
+    pub selected_prefix: &'a str,
     pub unselected_prefix: &'a str,
 }
 
@@ -73,16 +72,16 @@ pub fn draw_list(
             (list.unselected_color, list.unselected_prefix)
         };
         let prefix_label = Label {
-            text:     prefix,
+            text: prefix,
             position: Point::new(list.start.x, y),
-            style:    MonoTextStyle::new(&FONT_6X10, color),
+            style: MonoTextStyle::new(&FONT_6X10, color),
         };
         draw_label(display, &prefix_label);
 
         let item_label = Label {
-            text:     item,
+            text: item,
             position: Point::new(list.start.x + 12, y),
-            style:    MonoTextStyle::new(&FONT_6X10, color),
+            style: MonoTextStyle::new(&FONT_6X10, color),
         };
         draw_label(display, &item_label);
     }

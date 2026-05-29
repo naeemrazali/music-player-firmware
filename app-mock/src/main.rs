@@ -61,12 +61,18 @@ fn main() {
                 volume: 70,
                 elapsed_time_buf: [0u8; 6],
                 total_time_buf: [0u8; 6],
+                default_text_style: MonoTextStyle::new(&FONT_6X10, Gray8::BLACK),
             })
         } else {
             AppScreen::Settings(SettingsScreen {
                 background: Gray8::new(0x9F),
                 items: settings_items,
                 selected: 0,
+                heading: app_core::ui::Label {
+                    text: "Settings",
+                    position: Point::new(10, 20),
+                    style: MonoTextStyle::new(&FONT_6X10, Gray8::BLACK),
+                },
             })
         };
 
