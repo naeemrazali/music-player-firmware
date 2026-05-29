@@ -31,7 +31,7 @@ pub struct Label<'a> {
     pub style:    MonoTextStyle<'a, Gray8>,
 }
 
-pub fn draw_text(
+pub fn draw_label(
     display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
     label: &Label<'_>,
 ) {
@@ -67,14 +67,14 @@ pub fn draw_list(
             position: Point::new(list.start.x, y),
             style:    MonoTextStyle::new(&FONT_6X10, color),
         };
-        draw_text(display, &prefix_label);
+        draw_label(display, &prefix_label);
 
         let item_label = Label {
             text:     item,
             position: Point::new(list.start.x + 12, y),
             style:    MonoTextStyle::new(&FONT_6X10, color),
         };
-        draw_text(display, &item_label);
+        draw_label(display, &item_label);
     }
 }
 

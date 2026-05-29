@@ -46,14 +46,14 @@ impl MainScreen {
             position: Point::new(10, 20),
             style:    MonoTextStyle::new(&FONT_6X10, Gray8::BLACK),
         };
-        ui::draw_text(display, &title_label);
+        ui::draw_label(display, &title_label);
 
         let artist_label = ui::Label {
             text:     self.artist,
             position: Point::new(10, 36),
             style:    MonoTextStyle::new(&FONT_6X10, Gray8::new(100)),
         };
-        ui::draw_text(display, &artist_label);
+        ui::draw_label(display, &artist_label);
 
         ui::draw_progress_bar(
             display,
@@ -70,7 +70,7 @@ impl MainScreen {
             position: Point::new(10, 112),
             style:    MonoTextStyle::new(&FONT_6X10, Gray8::new(80)),
         };
-        ui::draw_text(display, &elapsed_label);
+        ui::draw_label(display, &elapsed_label);
 
         let total_str = ui::fmt_time_ms(self.total_ms, &mut self.total_time_buf);
         let total_label = ui::Label {
@@ -78,7 +78,7 @@ impl MainScreen {
             position: Point::new(200, 112),
             style:    MonoTextStyle::new(&FONT_6X10, Gray8::new(80)),
         };
-        ui::draw_text(display, &total_label);
+        ui::draw_label(display, &total_label);
 
         ui::draw_play_button(
             display,
@@ -106,7 +106,7 @@ impl SettingsScreen {
             position: Point::new(10, 20),
             style:    MonoTextStyle::new(&FONT_6X10, Gray8::new(0)),
         };
-        ui::draw_text(display, &settings_label);
+        ui::draw_label(display, &settings_label);
         ui::draw_line(
             display,
             Point::new(10, 34),
