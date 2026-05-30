@@ -30,12 +30,21 @@ impl<'a> Label<'a> {
     }
 }
 
+impl<'a> Label<'a> {
+    pub fn new(text: &'a str, position: Point, style: MonoTextStyle<'a, Gray8>) -> Self {
+        Self {
+            text,
+            position,
+            style,
+        }
+    }
+}
+
 pub struct ProgressBar {
     pub rect: Rectangle,
-    pub fg: Gray8,
-    pub bg: Gray8,
-    pub total_ms: u32,
-    pub elapsed_ms: u32,
+    pub percent: u32,
+    pub rect_colour: Gray8,
+    pub fill_colour: Gray8,
 }
 
 impl ProgressBar {
@@ -44,26 +53,36 @@ impl ProgressBar {
         display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
     ) {
         self.rect
-            .into_styled(PrimitiveStyle::with_fill(self.bg))
+            .into_styled(PrimitiveStyle::with_fill(self.rect_colour))
             .draw(display)
             .unwrap();
 
-        let percent = ((self.elapsed_ms * 100) / self.total_ms.max(1)).clamp(0, 100);
-        let filled = (self.rect.size.width * percent) / 100;
-
-        if filled > 0 {
+        if self.percent > 0 {
+            let filled = (self.rect.size.width * self.percent) / 100;
             let filled_rect =
                 Rectangle::new(self.rect.top_left, Size::new(filled, self.rect.size.height));
             filled_rect
-                .into_styled(PrimitiveStyle::with_fill(self.fg))
+                .into_styled(PrimitiveStyle::with_fill(self.fill_colour))
                 .draw(display)
                 .unwrap();
         }
     }
 }
 
+impl ProgressBar {
+    pub fn new(rect: Rectangle, percent: u32, rect_colour: Gray8, fill_colour: Gray8) -> Self {
+        Self {
+            rect,
+            percent,
+            rect_colour,
+            fill_colour,
+        }
+    }
+}
+
 pub struct PlayButton {
     pub center: Point,
+    pub radius: u32,
     pub color: Gray8,
     pub is_playing: bool,
 }
@@ -73,10 +92,13 @@ impl PlayButton {
         &self,
         display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
     ) {
-        let r = 12u32;
+        // let r = 12u32;
         Circle::new(
-            Point::new(self.center.x - r as i32, self.center.y - r as i32),
-            r * 2,
+            Point::new(
+                self.center.x - self.radius as i32,
+                self.center.y - self.radius as i32,
+            ),
+            self.radius * 2,
         )
         .into_styled(
             PrimitiveStyleBuilder::new()
@@ -115,6 +137,17 @@ impl PlayButton {
     }
 }
 
+impl PlayButton {
+    pub fn new(center: Point, radius: u32, color: Gray8, is_playing: bool) -> Self {
+        Self {
+            center,
+            radius,
+            color,
+            is_playing,
+        }
+    }
+}
+
 pub struct HorizontalLine {
     pub start: Point,
     pub end: Point,
@@ -130,6 +163,12 @@ impl HorizontalLine {
             .into_styled(self.style)
             .draw(display)
             .unwrap();
+    }
+}
+
+impl HorizontalLine {
+    pub fn new(start: Point, end: Point, style: PrimitiveStyle<Gray8>) -> Self {
+        Self { start, end, style }
     }
 }
 
