@@ -13,140 +13,171 @@ pub fn clear_background(
     display.clear(color).unwrap();
 }
 
-pub fn draw_line(
-    display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
-    line_start: Point,
-    line_end: Point,
-    style: PrimitiveStyle<Gray8>,
-) {
-    Line::new(line_start, line_end)
-        .into_styled(style)
-        .draw(display)
-        .unwrap();
-}
-
 pub struct Label<'a> {
-    pub text: &'a str,
+    pub text:     &'a str,
     pub position: Point,
-    pub style: MonoTextStyle<'a, Gray8>,
+    pub style:    MonoTextStyle<'a, Gray8>,
 }
 
-pub fn draw_text(
-    display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
-    text: &str,
-    position: Point,
-    style: MonoTextStyle<'_, Gray8>,
-) {
-    Text::new(text, position, style).draw(display).unwrap();
-}
-
-pub fn draw_label(
-    display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
-    label: &Label<'_>,
-) {
-    Text::new(label.text, label.position, label.style)
-        .draw(display)
-        .unwrap();
-}
-
-pub struct List<'a> {
-    pub items: &'a [&'a str],
-    pub selected: usize,
-    pub start: Point,
-    pub item_height: i32,
-    pub selected_color: Gray8,
-    pub unselected_color: Gray8,
-    pub selected_prefix: &'a str,
-    pub unselected_prefix: &'a str,
-}
-
-pub fn draw_list(
-    display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
-    list: &List<'_>,
-) {
-    for (i, item) in list.items.iter().enumerate() {
-        let y = list.start.y + i as i32 * list.item_height;
-        let (color, prefix) = if i == list.selected {
-            (list.selected_color, list.selected_prefix)
-        } else {
-            (list.unselected_color, list.unselected_prefix)
-        };
-        let prefix_label = Label {
-            text: prefix,
-            position: Point::new(list.start.x, y),
-            style: MonoTextStyle::new(&FONT_6X10, color),
-        };
-        draw_label(display, &prefix_label);
-
-        let item_label = Label {
-            text: item,
-            position: Point::new(list.start.x + 12, y),
-            style: MonoTextStyle::new(&FONT_6X10, color),
-        };
-        draw_label(display, &item_label);
-    }
-}
-
-pub fn draw_progress_bar(
-    display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
-    total: u32,
-    elapsed: u32,
-    rect: Rectangle,
-    fg: Gray8,
-    bg: Gray8,
-) {
-    // Background track
-    rect.into_styled(PrimitiveStyle::with_fill(bg))
-        .draw(display)
-        .unwrap();
-
-    let percent_elapsed = ((elapsed * 100) / total.max(1)).clamp(0, 100);
-    let filled = (rect.size.width * percent_elapsed) / 100;
-
-    if filled > 0 {
-        let filled_rect = Rectangle::new(rect.top_left, Size::new(filled, rect.size.height));
-        filled_rect
-            .into_styled(PrimitiveStyle::with_fill(fg))
+impl<'a> Label<'a> {
+    pub fn draw(&self, display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>) {
+        Text::new(self.text, self.position, self.style)
             .draw(display)
             .unwrap();
     }
 }
 
-pub fn draw_play_button(
-    display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
-    center: Point,
-    is_playing: bool,
-    color: Gray8,
-) {
-    let r = 12u32;
-    Circle::new(Point::new(center.x - r as i32, center.y - r as i32), r * 2)
+pub struct ProgressBar {
+    pub rect:       Rectangle,
+    pub fg:         Gray8,
+    pub bg:         Gray8,
+    pub total_ms:   u32,
+    pub elapsed_ms: u32,
+}
+
+impl ProgressBar {
+    pub fn draw(&self, display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>) {
+        self.rect
+            .into_styled(PrimitiveStyle::with_fill(self.bg))
+            .draw(display)
+            .unwrap();
+
+        let percent = ((self.elapsed_ms * 100) / self.total_ms.max(1)).clamp(0, 100);
+        let filled  = (self.rect.size.width * percent) / 100;
+
+        if filled > 0 {
+            let filled_rect = Rectangle::new(
+                self.rect.top_left,
+                Size::new(filled, self.rect.size.height),
+            );
+            filled_rect
+                .into_styled(PrimitiveStyle::with_fill(self.fg))
+                .draw(display)
+                .unwrap();
+        }
+    }
+}
+
+pub struct PlayButton {
+    pub center:     Point,
+    pub color:      Gray8,
+    pub is_playing: bool,
+}
+
+impl PlayButton {
+    pub fn draw(&self, display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>) {
+        let r = 12u32;
+        Circle::new(
+            Point::new(self.center.x - r as i32, self.center.y - r as i32),
+            r * 2,
+        )
         .into_styled(
             PrimitiveStyleBuilder::new()
-                .stroke_color(color)
+                .stroke_color(self.color)
                 .stroke_width(2)
                 .build(),
         )
         .draw(display)
         .unwrap();
 
-    if is_playing {
-        Rectangle::new(Point::new(center.x - 5, center.y - 5), Size::new(3, 10))
-            .into_styled(PrimitiveStyle::with_fill(color))
+        if self.is_playing {
+            Rectangle::new(
+                Point::new(self.center.x - 5, self.center.y - 5),
+                Size::new(3, 10),
+            )
+            .into_styled(PrimitiveStyle::with_fill(self.color))
             .draw(display)
             .unwrap();
-        Rectangle::new(Point::new(center.x + 2, center.y - 5), Size::new(3, 10))
-            .into_styled(PrimitiveStyle::with_fill(color))
+            Rectangle::new(
+                Point::new(self.center.x + 2, self.center.y - 5),
+                Size::new(3, 10),
+            )
+            .into_styled(PrimitiveStyle::with_fill(self.color))
             .draw(display)
             .unwrap();
-    } else {
-        Triangle::new(
-            Point::new(center.x - 5, center.y - 5),
-            Point::new(center.x - 5, center.y + 5),
-            Point::new(center.x + 5, center.y),
-        )
-        .into_styled(PrimitiveStyle::with_fill(color))
-        .draw(display)
-        .unwrap();
+        } else {
+            Triangle::new(
+                Point::new(self.center.x - 5, self.center.y - 5),
+                Point::new(self.center.x - 5, self.center.y + 5),
+                Point::new(self.center.x + 5, self.center.y),
+            )
+            .into_styled(PrimitiveStyle::with_fill(self.color))
+            .draw(display)
+            .unwrap();
+        }
+    }
+}
+
+pub struct HorizontalLine {
+    pub start: Point,
+    pub end:   Point,
+    pub style: PrimitiveStyle<Gray8>,
+}
+
+impl HorizontalLine {
+    pub fn draw(&self, display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>) {
+        Line::new(self.start, self.end)
+            .into_styled(self.style)
+            .draw(display)
+            .unwrap();
+    }
+}
+
+pub struct List<'a> {
+    pub items:             &'a [&'a str],
+    pub selected:          usize,
+    pub start:             Point,
+    pub item_height:       i32,
+    pub selected_color:    Gray8,
+    pub unselected_color:  Gray8,
+    pub selected_prefix:   &'a str,
+    pub unselected_prefix: &'a str,
+}
+
+impl<'a> List<'a> {
+    pub fn draw(&self, display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>) {
+        for (i, item) in self.items.iter().enumerate() {
+            let y = self.start.y + i as i32 * self.item_height;
+            let (color, prefix) = if i == self.selected {
+                (self.selected_color, self.selected_prefix)
+            } else {
+                (self.unselected_color, self.unselected_prefix)
+            };
+
+            let prefix_label = Label {
+                text:     prefix,
+                position: Point::new(self.start.x, y),
+                style:    MonoTextStyle::new(&FONT_6X10, color),
+            };
+            prefix_label.draw(display);
+
+            let item_label = Label {
+                text:     item,
+                position: Point::new(self.start.x + 12, y),
+                style:    MonoTextStyle::new(&FONT_6X10, color),
+            };
+            item_label.draw(display);
+        }
+    }
+}
+
+pub enum Widget<'a> {
+    Label(Label<'a>),
+    ProgressBar(ProgressBar),
+    PlayButton(PlayButton),
+    HorizontalLine(HorizontalLine),
+    List(List<'a>),
+}
+
+impl<'a> Widget<'a> {
+    pub fn draw(&self, display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>) {
+        match self {
+            Widget::Label(w)        => w.draw(display),
+            Widget::ProgressBar(w)  => w.draw(display),
+            Widget::PlayButton(w)   => w.draw(display),
+            Widget::HorizontalLine(w) => w.draw(display),
+            Widget::List(w)         => w.draw(display),
+        }
     }
 }
 

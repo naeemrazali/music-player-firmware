@@ -1,22 +1,21 @@
-use embedded_graphics::mono_font::MonoTextStyle;
+use embedded_graphics::mono_font::{MonoTextStyle, ascii::FONT_6X10};
 use embedded_graphics::pixelcolor::Gray8;
 use embedded_graphics::prelude::*;
-use embedded_graphics::primitives::{PrimitiveStyle, Rectangle};
 
 use crate::ui;
 
-pub enum AppScreen {
-    Main(MainScreen),
-    Settings(SettingsScreen),
+pub enum AppScreen<'a> {
+    Main(&'a mut MainScreen),
+    Settings(&'a mut SettingsScreen),
 }
 
-impl AppScreen {
+impl AppScreen<'_> {
     pub fn draw(
         &mut self,
         display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
     ) {
         match self {
-            AppScreen::Main(s) => s.draw(display),
+            AppScreen::Main(s)     => s.draw(display),
             AppScreen::Settings(s) => s.draw(display),
         }
     }
@@ -24,15 +23,12 @@ impl AppScreen {
 
 pub struct MainScreen {
     pub background: Gray8,
-    pub title_label: ui::Label<'static>,
-    pub artist_label: ui::Label<'static>,
-    pub elapsed_ms: u32,
-    pub total_ms: u32,
-    pub is_playing: bool,
-    pub volume: u8,
-    pub elapsed_time_buf: [u8; 6],
-    pub total_time_buf: [u8; 6],
-    pub default_text_style: MonoTextStyle<'static, Gray8>,
+    pub title:      ui::Widget<'static>,
+    pub artist:     ui::Widget<'static>,
+    pub progress:   ui::Widget<'static>,
+    pub play_btn:   ui::Widget<'static>,
+    pub elapsed_buf: [u8; 6],
+    pub total_buf:   [u8; 6],
 }
 
 impl MainScreen {
@@ -41,42 +37,40 @@ impl MainScreen {
         display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
     ) {
         ui::clear_background(display, self.background);
-        ui::draw_label(display, &self.title_label);
-        ui::draw_label(display, &self.artist_label);
-        ui::draw_progress_bar(
-            display,
-            self.total_ms,
-            self.elapsed_ms,
-            Rectangle::new(Point::new(10, 100), Size::new(220, 6)),
-            Gray8::new(0),
-            Gray8::new(160),
-        );
-        ui::draw_text(
-            display,
-            ui::fmt_time_ms(self.elapsed_ms, &mut self.elapsed_time_buf),
-            Point::new(10, 112),
-            self.default_text_style,
-        );
-        ui::draw_text(
-            display,
-            ui::fmt_time_ms(self.total_ms, &mut self.total_time_buf),
-            Point::new(200, 112),
-            self.default_text_style,
-        );
-        ui::draw_play_button(
-            display,
-            Point::new(120, 170),
-            self.is_playing,
-            Gray8::new(0),
-        );
+
+        for widget in [&self.title, &self.artist, &self.progress, &self.play_btn] {
+            widget.draw(display);
+        }
+
+        let (elapsed_ms, total_ms) = if let ui::Widget::ProgressBar(ref pb) = self.progress {
+            (pb.elapsed_ms, pb.total_ms)
+        } else {
+            (0, 1)
+        };
+
+        let elapsed_str = ui::fmt_time_ms(elapsed_ms, &mut self.elapsed_buf);
+        ui::Label {
+            text:     elapsed_str,
+            position: Point::new(10, 112),
+            style:    MonoTextStyle::new(&FONT_6X10, Gray8::new(80)),
+        }
+        .draw(display);
+
+        let total_str = ui::fmt_time_ms(total_ms, &mut self.total_buf);
+        ui::Label {
+            text:     total_str,
+            position: Point::new(200, 112),
+            style:    MonoTextStyle::new(&FONT_6X10, Gray8::new(80)),
+        }
+        .draw(display);
     }
 }
 
 pub struct SettingsScreen {
     pub background: Gray8,
-    pub heading: ui::Label<'static>,
-    pub items: &'static [&'static str],
-    pub selected: usize,
+    pub heading:    ui::Widget<'static>,
+    pub separator:  ui::Widget<'static>,
+    pub list:       ui::Widget<'static>,
 }
 
 impl SettingsScreen {
@@ -85,24 +79,9 @@ impl SettingsScreen {
         display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
     ) {
         ui::clear_background(display, self.background);
-        ui::draw_label(display, &self.heading);
-        ui::draw_line(
-            display,
-            Point::new(10, 34),
-            Point::new(230, 34),
-            PrimitiveStyle::with_stroke(Gray8::new(100), 1),
-        );
 
-        let list = ui::List {
-            items: self.items,
-            selected: self.selected,
-            start: Point::new(10, 46),
-            item_height: 14,
-            selected_color: Gray8::BLACK,
-            unselected_color: Gray8::new(100),
-            selected_prefix: "> ",
-            unselected_prefix: "  ",
-        };
-        ui::draw_list(display, &list);
+        for widget in [&self.heading, &self.separator, &self.list] {
+            widget.draw(display);
+        }
     }
 }
