@@ -174,29 +174,6 @@ impl<'a> List<'a> {
     }
 }
 
-pub enum Widget<'a> {
-    Label(Label<'a>),
-    ProgressBar(ProgressBar),
-    PlayButton(PlayButton),
-    HorizontalLine(HorizontalLine),
-    List(List<'a>),
-}
-
-impl<'a> Widget<'a> {
-    pub fn draw(
-        &self,
-        display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
-    ) {
-        match self {
-            Widget::Label(w) => w.draw(display),
-            Widget::ProgressBar(w) => w.draw(display),
-            Widget::PlayButton(w) => w.draw(display),
-            Widget::HorizontalLine(w) => w.draw(display),
-            Widget::List(w) => w.draw(display),
-        }
-    }
-}
-
 pub fn fmt_time_ms(ms: u32, buf: &mut [u8; 6]) -> &str {
     let secs = ms / 1000;
     let m = secs / 60;
