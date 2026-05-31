@@ -31,7 +31,7 @@ fn main() {
     let mut on_main_screen = true;
 
     // test constant
-    let total_ms = 35400;
+    let total_ms = 354000;
 
     // Pre-construct both screens
     let mut main_screen = MainScreen::default();
@@ -49,6 +49,9 @@ fn main() {
         // Sync state into main_screen widgets
         main_screen.play_button.is_playing = is_playing;
         main_screen.progress.percent = (elapsed_ms * 100) / total_ms;
+        main_screen
+            .total_time
+            .set_text(from_utf8(&ui::fmt_time_ms(total_ms)).unwrap());
         main_screen
             .elapsed_time
             .set_text(from_utf8(&ui::fmt_time_ms(elapsed_ms)).unwrap());
