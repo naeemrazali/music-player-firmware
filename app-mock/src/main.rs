@@ -1,5 +1,8 @@
+use std::str::from_utf8;
+
 use app_core::display_config::{DISPLAY_HEIGHT, DISPLAY_WIDTH, PIXEL_SCALE, PIXEL_SPACING};
 use app_core::screens::{AppScreen, MainScreen, SettingsScreen};
+use app_core::ui;
 use embedded_graphics::pixelcolor::Gray8;
 use embedded_graphics::prelude::*;
 use embedded_graphics_simulator::sdl2::Keycode;
@@ -47,6 +50,9 @@ fn main() {
         // Sync state into main_screen widgets
         main_screen.play_button.is_playing = is_playing;
         main_screen.progress.percent = (elapsed_ms * 100) / total_ms;
+        main_screen
+            .elapsed_time
+            .set_text(from_utf8(&ui::fmt_time_ms(elapsed_ms)).unwrap());
 
         // ── Draw phase ───────────────────────────────────────────────────
         let current = if on_main_screen {

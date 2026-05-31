@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 embedded-graphics = "0.8"
+heapless         = "0.8"

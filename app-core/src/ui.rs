@@ -5,6 +5,7 @@ use embedded_graphics::{
     primitives::{Circle, Line, PrimitiveStyle, PrimitiveStyleBuilder, Rectangle, Triangle},
     text::Text,
 };
+use heapless::String;
 
 pub fn clear_background(
     display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
@@ -14,7 +15,7 @@ pub fn clear_background(
 }
 
 pub struct Label<'a> {
-    pub text: &'a str,
+    pub text: String<32>,
     pub position: Point,
     pub style: MonoTextStyle<'a, Gray8>,
 }
@@ -24,19 +25,24 @@ impl<'a> Label<'a> {
         &self,
         display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
     ) {
-        Text::new(self.text, self.position, self.style)
+        Text::new(&self.text, self.position, self.style)
             .draw(display)
             .unwrap();
     }
-}
 
-impl<'a> Label<'a> {
-    pub fn new(text: &'a str, position: Point, style: MonoTextStyle<'a, Gray8>) -> Self {
+    pub fn new(text: &str, position: Point, style: MonoTextStyle<'a, Gray8>) -> Self {
+        let mut s = String::<32>::new();
+        let _ = s.push_str(text);
         Self {
-            text,
+            text: s,
             position,
             style,
         }
+    }
+
+    pub fn set_text(&mut self, text: &str) {
+        self.text.clear();
+        let _ = self.text.push_str(text);
     }
 }
 
@@ -196,31 +202,33 @@ impl<'a> List<'a> {
                 (self.unselected_color, self.unselected_prefix)
             };
 
-            let prefix_label = Label {
-                text: prefix,
-                position: Point::new(self.start.x, y),
-                style: MonoTextStyle::new(&FONT_6X10, color),
-            };
+            let prefix_label = Label::new(
+                prefix,
+                Point::new(self.start.x, y),
+                MonoTextStyle::new(&FONT_6X10, color),
+            );
             prefix_label.draw(display);
 
-            let item_label = Label {
-                text: item,
-                position: Point::new(self.start.x + 12, y),
-                style: MonoTextStyle::new(&FONT_6X10, color),
-            };
+            let item_label = Label::new(
+                item,
+                Point::new(self.start.x + 12, y),
+                MonoTextStyle::new(&FONT_6X10, color),
+            );
+
             item_label.draw(display);
         }
     }
 }
 
-pub fn fmt_time_ms(ms: u32, buf: &mut [u8; 6]) -> &str {
+pub fn fmt_time_ms(ms: u32) -> [u8; 5] {
+    let mut buffer = [0u8; 5];
     let secs = ms / 1000;
     let m = secs / 60;
     let s = secs % 60;
-    buf[0] = b'0' + (m / 10) as u8;
-    buf[1] = b'0' + (m % 10) as u8;
-    buf[2] = b':';
-    buf[3] = b'0' + (s / 10) as u8;
-    buf[4] = b'0' + (s % 10) as u8;
-    core::str::from_utf8(&buf[..5]).unwrap_or("00:00")
+    buffer[0] = b'0' + (m / 10) as u8;
+    buffer[1] = b'0' + (m % 10) as u8;
+    buffer[2] = b':';
+    buffer[3] = b'0' + (s / 10) as u8;
+    buffer[4] = b'0' + (s % 10) as u8;
+    buffer
 }
