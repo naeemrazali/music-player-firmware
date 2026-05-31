@@ -1,4 +1,5 @@
 use app_core::display_config::{DISPLAY_HEIGHT, DISPLAY_WIDTH, PIXEL_SCALE, PIXEL_SPACING};
+use app_core::player::Player;
 use app_core::screens::{AppScreen, MainScreen, SettingsScreen};
 use app_core::ui;
 use core::str::from_utf8;
@@ -25,13 +26,9 @@ fn main() {
         &output_settings,
     );
 
-    // Mutable state
-    let mut is_playing = true;
-    let mut elapsed_ms = 0u32;
     let mut on_main_screen = true;
 
-    // test constant
-    let total_ms = 354000;
+    let mut player = Player::new(354000);
 
     // Pre-construct both screens
     let mut main_screen = MainScreen::default();
@@ -39,22 +36,17 @@ fn main() {
 
     loop {
         // ── Update phase ───────────────────────────────────────────────
-        if is_playing {
-            elapsed_ms += 33;
-            if elapsed_ms > total_ms {
-                elapsed_ms = total_ms;
-            }
-        }
+        player.tick(33);
 
         // Sync state into main_screen widgets
-        main_screen.play_button.is_playing = is_playing;
-        main_screen.progress.percent = (elapsed_ms * 100) / total_ms;
+        main_screen.play_button.is_playing = player.is_playing();
+        main_screen.progress.percent = player.progress_percent();
         main_screen
             .total_time
-            .set_text(from_utf8(&ui::fmt_time_ms(total_ms)).unwrap());
+            .set_text(from_utf8(&ui::fmt_time_ms(player.total_ms())).unwrap());
         main_screen
             .elapsed_time
-            .set_text(from_utf8(&ui::fmt_time_ms(elapsed_ms)).unwrap());
+            .set_text(from_utf8(&ui::fmt_time_ms(player.elapsed_ms())).unwrap());
 
         // ── Draw phase ───────────────────────────────────────────────────
         let current = if on_main_screen {
@@ -71,7 +63,7 @@ fn main() {
                 SimulatorEvent::Quit => return,
 
                 SimulatorEvent::KeyDown { keycode, .. } => match keycode {
-                    Keycode::Space => is_playing = !is_playing,
+                    Keycode::Space => player.toggle_playback(),
                     Keycode::M => on_main_screen = !on_main_screen,
                     Keycode::Escape => return,
                     _ => {}
