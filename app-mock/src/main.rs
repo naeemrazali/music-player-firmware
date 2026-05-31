@@ -1,8 +1,7 @@
-use std::str::from_utf8;
-
 use app_core::display_config::{DISPLAY_HEIGHT, DISPLAY_WIDTH, PIXEL_SCALE, PIXEL_SPACING};
 use app_core::screens::{AppScreen, MainScreen, SettingsScreen};
 use app_core::ui;
+use core::str::from_utf8;
 use embedded_graphics::pixelcolor::Gray8;
 use embedded_graphics::prelude::*;
 use embedded_graphics_simulator::sdl2::Keycode;
