@@ -1,7 +1,4 @@
-pub enum PlaybackState {
-    Playing,
-    Paused,
-}
+use crate::playback_state::PlaybackState;
 
 pub struct Player {
     state: PlaybackState,
@@ -18,27 +15,17 @@ impl Player {
         }
     }
 
-    /// Toggle between Playing and Paused.
-    /// Called by the event handler when the play/pause button is pressed.
-    pub fn toggle_playback(&mut self) {
+    pub fn toggle_playback(&mut self) -> PlaybackState {
         self.state = match self.state {
             PlaybackState::Playing => PlaybackState::Paused,
             PlaybackState::Paused => PlaybackState::Playing,
         };
+        self.state
     }
 
-    pub fn is_playing(&self) -> bool {
-        matches!(self.state, PlaybackState::Playing)
-    }
-
-    /// Advance elapsed time by `delta_ms`, but only if currently playing.
-    /// Called by the update loop every frame.
     pub fn tick(&mut self, delta_ms: u32) {
-        if self.is_playing() {
-            self.elapsed_ms += delta_ms;
-            if self.elapsed_ms > self.total_ms {
-                self.elapsed_ms = self.total_ms;
-            }
+        if matches!(self.state, PlaybackState::Playing) {
+            self.elapsed_ms = self.elapsed_ms.saturating_add(delta_ms).min(self.total_ms);
         }
     }
 

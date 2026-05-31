@@ -1,14 +1,16 @@
-use app_core::display_config::{DISPLAY_HEIGHT, DISPLAY_WIDTH, PIXEL_SCALE, PIXEL_SPACING};
-use app_core::player::Player;
-use app_core::screens::{AppScreen, MainScreen, SettingsScreen};
-use app_core::ui;
-use core::str::from_utf8;
 use embedded_graphics::pixelcolor::Gray8;
 use embedded_graphics::prelude::*;
 use embedded_graphics_simulator::sdl2::Keycode;
 use embedded_graphics_simulator::{
     OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
 };
+
+use app_core::display_config::{DISPLAY_HEIGHT, DISPLAY_WIDTH, PIXEL_SCALE, PIXEL_SPACING};
+use app_core::player::Player;
+use app_core::screen_manager::ScreenManager;
+use app_core::ui;
+
+use core::str::from_utf8;
 
 fn main() {
     let mut display: SimulatorDisplay<Gray8> =
@@ -26,45 +28,34 @@ fn main() {
         &output_settings,
     );
 
-    let mut on_main_screen = true;
-
     let mut player = Player::new(354000);
-
-    // Pre-construct both screens
-    let mut main_screen = MainScreen::default();
-    let mut settings_screen = SettingsScreen::default();
+    let mut screen_manager = ScreenManager::default();
 
     loop {
-        // ── Update phase ───────────────────────────────────────────────
         player.tick(33);
 
-        // Sync state into main_screen widgets
-        main_screen.play_button.is_playing = player.is_playing();
-        main_screen.progress.percent = player.progress_percent();
-        main_screen
+        screen_manager.main.progress.percent = player.progress_percent();
+        screen_manager
+            .main
             .total_time
             .set_text(from_utf8(&ui::fmt_time_ms(player.total_ms())).unwrap());
-        main_screen
+        screen_manager
+            .main
             .elapsed_time
             .set_text(from_utf8(&ui::fmt_time_ms(player.elapsed_ms())).unwrap());
 
-        // ── Draw phase ───────────────────────────────────────────────────
-        let current = if on_main_screen {
-            AppScreen::Main(&mut main_screen)
-        } else {
-            AppScreen::Settings(&mut settings_screen)
-        };
-        current.draw(&mut display);
+        screen_manager.draw(&mut display);
         window.update(&display);
 
-        // ── Input phase ──────────────────────────────────────────────────
         for event in window.events() {
             match event {
                 SimulatorEvent::Quit => return,
 
                 SimulatorEvent::KeyDown { keycode, .. } => match keycode {
-                    Keycode::Space => player.toggle_playback(),
-                    Keycode::M => on_main_screen = !on_main_screen,
+                    Keycode::Space => {
+                        screen_manager.main.play_button.playback_state = player.toggle_playback()
+                    }
+                    Keycode::M => screen_manager.toggle_screens(),
                     Keycode::Escape => return,
                     _ => {}
                 },

@@ -7,6 +7,8 @@ use embedded_graphics::{
 };
 use heapless::String;
 
+use crate::playback_state::PlaybackState;
+
 pub fn clear_background(
     display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
     color: Gray8,
@@ -86,11 +88,54 @@ impl ProgressBar {
     }
 }
 
+fn draw_circle(
+    display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
+    center: Point,
+    radius: u32,
+    style: PrimitiveStyle<Gray8>,
+) {
+    Circle::with_center(center, radius * 2)
+        .into_styled(style)
+        .draw(display)
+        .unwrap();
+}
+
+fn draw_pause_symbol(
+    display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
+    center: Point,
+    color: Gray8,
+) {
+    let style = PrimitiveStyle::with_fill(color);
+    Rectangle::new(Point::new(center.x - 5, center.y - 5), Size::new(3, 10))
+        .into_styled(style)
+        .draw(display)
+        .unwrap();
+    Rectangle::new(Point::new(center.x + 2, center.y - 5), Size::new(3, 10))
+        .into_styled(style)
+        .draw(display)
+        .unwrap();
+}
+
+fn draw_play_symbol(
+    display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
+    center: Point,
+    color: Gray8,
+) {
+    Triangle::new(
+        Point::new(center.x - 5, center.y - 5),
+        Point::new(center.x - 5, center.y + 5),
+        Point::new(center.x + 5, center.y),
+    )
+    .into_styled(PrimitiveStyle::with_fill(color))
+    .draw(display)
+    .unwrap();
+}
+
 pub struct PlayButton {
     pub center: Point,
     pub radius: u32,
     pub color: Gray8,
-    pub is_playing: bool,
+    pub playback_state: PlaybackState,
 }
 
 impl PlayButton {
@@ -98,58 +143,24 @@ impl PlayButton {
         &self,
         display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
     ) {
-        // let r = 12u32;
-        Circle::new(
-            Point::new(
-                self.center.x - self.radius as i32,
-                self.center.y - self.radius as i32,
-            ),
-            self.radius * 2,
-        )
-        .into_styled(
-            PrimitiveStyleBuilder::new()
-                .stroke_color(self.color)
-                .stroke_width(2)
-                .build(),
-        )
-        .draw(display)
-        .unwrap();
+        let circle_style = PrimitiveStyleBuilder::new()
+            .stroke_color(self.color)
+            .stroke_width(2)
+            .build();
+        draw_circle(display, self.center, self.radius, circle_style);
 
-        if self.is_playing {
-            Rectangle::new(
-                Point::new(self.center.x - 5, self.center.y - 5),
-                Size::new(3, 10),
-            )
-            .into_styled(PrimitiveStyle::with_fill(self.color))
-            .draw(display)
-            .unwrap();
-            Rectangle::new(
-                Point::new(self.center.x + 2, self.center.y - 5),
-                Size::new(3, 10),
-            )
-            .into_styled(PrimitiveStyle::with_fill(self.color))
-            .draw(display)
-            .unwrap();
-        } else {
-            Triangle::new(
-                Point::new(self.center.x - 5, self.center.y - 5),
-                Point::new(self.center.x - 5, self.center.y + 5),
-                Point::new(self.center.x + 5, self.center.y),
-            )
-            .into_styled(PrimitiveStyle::with_fill(self.color))
-            .draw(display)
-            .unwrap();
+        match self.playback_state {
+            PlaybackState::Playing => draw_pause_symbol(display, self.center, self.color),
+            PlaybackState::Paused => draw_play_symbol(display, self.center, self.color),
         }
     }
-}
 
-impl PlayButton {
-    pub fn new(center: Point, radius: u32, color: Gray8, is_playing: bool) -> Self {
+    pub fn new(center: Point, radius: u32, color: Gray8, playback_state: PlaybackState) -> Self {
         Self {
             center,
             radius,
             color,
-            is_playing,
+            playback_state,
         }
     }
 }

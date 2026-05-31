@@ -3,24 +3,8 @@ use embedded_graphics::pixelcolor::Gray8;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::{PrimitiveStyle, Rectangle};
 
+use crate::playback_state::PlaybackState;
 use crate::ui;
-
-pub enum AppScreen<'a> {
-    Main(&'a mut MainScreen),
-    Settings(&'a mut SettingsScreen),
-}
-
-impl AppScreen<'_> {
-    pub fn draw(
-        &self,
-        display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
-    ) {
-        match self {
-            AppScreen::Main(s) => s.draw(display),
-            AppScreen::Settings(s) => s.draw(display),
-        }
-    }
-}
 
 pub struct MainScreen {
     pub background: Gray8,
@@ -77,7 +61,12 @@ impl Default for MainScreen {
                 Gray8::new(0xA0),
                 Gray8::BLACK,
             )),
-            play_button: (ui::PlayButton::new(Point::new(120, 170), 12, Gray8::BLACK, true)),
+            play_button: (ui::PlayButton::new(
+                Point::new(120, 170),
+                12,
+                Gray8::BLACK,
+                PlaybackState::Playing,
+            )),
         }
     }
 }
