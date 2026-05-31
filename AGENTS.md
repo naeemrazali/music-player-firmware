@@ -62,9 +62,10 @@ music-player-firmware/
 │
 ├── app-core/                       # Pure business logic — no hardware dependencies
 │   └── src/
+│       ├── display_config.rs       # DISPLAY_WIDTH, DISPLAY_HEIGHT, PIXEL_SCALE
 │       ├── player.rs               # Playback state machine
-│       ├── playlist.rs             # Track ordering, shuffle
-│       └── codec_negotiation.rs    # Format detection, Symphonia config
+│       ├── screens.rs              # Screen composition (MainScreen, SettingsScreen)
+│       └── ui.rs                   # Widget primitives (Label, ProgressBar, PlayButton, List)
 │
 ├── app-firmware/                   # Embassy firmware — STM32 target only
 │   ├── .cargo/config.toml          # [build] target = "thumbv7em-none-eabihf" ONLY HERE
@@ -83,8 +84,6 @@ music-player-firmware/
     ├── Cargo.toml                  # edition = "2024"
     └── src/
         ├── main.rs                 # SDL2 window, event loop, keyboard shortcuts
-        ├── display_config.rs       # DISPLAY_WIDTH, DISPLAY_HEIGHT, PIXEL_SCALE
-        └── ui.rs                   # All drawing code — DrawTarget<Color = Rgb565>
 ```
 
 ---
@@ -98,7 +97,7 @@ music-player-firmware/
    Never add `embassy-*`, `cortex-m`, or any `no_std`-only dep to these crates without
    also gating it behind `#[cfg(not(test))]`.
 
-3. **All drawing code uses `DrawTarget<Color = Rgb565>`** — never reference
+3. **All drawing code uses `DrawTarget<Color = Gray8>`** — never reference
    `SimulatorDisplay` directly outside of `app-mock/src/main.rs`. This keeps UI code
    portable to the real display driver with zero changes.
 
@@ -202,7 +201,7 @@ Mock implementations live in `app-mock::mock-file-reader` and
 
 ## Display / Simulator (`app-mock`)
 
-- **Pixel colour:** `Rgb565` — matches what most small embedded TFT displays use natively.
+- **Pixel colour:** `Gray8` — grayscale pixels. Chosen to match the target monochrome LCD display.
 - **Placeholder resolution:** 240×240. Change `DISPLAY_WIDTH` / `DISPLAY_HEIGHT` in
   `src/display_config.rs` once the real display is chosen.
 - **Scale:** `PIXEL_SCALE = 3` — zooms the desktop window to a comfortable size.
@@ -242,7 +241,7 @@ cargo test -p app-hal -p app-core
 
 ## Milestones
 
-- [x] **Milestone 1** GUI framework + screen manager (`app-core` + `app-mock`) — screen enum, shared drawing primitives, update/draw loop, keyboard navigation
+- [x] **Milestone 1** Retained-mode GUI framework (`app-core` + `app-mock`) — widget structs (`Label`, `ProgressBar`, `PlayButton`, `List`), screen composition via `Default`, `app-mock` update/sync/draw loop with keyboard navigation
 - [ ] **Milestone 2** Player state machine + playlist logic (`app-core`, host-tested)
 - [ ] **Milestone 3** Transport controls + progress bar UI
 - [ ] **Milestone 4** FLAC decode via Symphonia (desktop end-to-end)
