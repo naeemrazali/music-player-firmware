@@ -62,7 +62,7 @@ impl Default for MainScreen {
                 MonoTextStyle::new(&FONT_6X10, Gray8::new(0x64)),
             )),
             elapsed_time: (ui::Label::new(
-                "01:30",
+                "00:00",
                 Point::new(10, 112),
                 MonoTextStyle::new(&FONT_6X10, Gray8::new(0x64)),
             )),
