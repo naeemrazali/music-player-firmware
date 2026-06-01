@@ -1,20 +1,21 @@
 use embedded_graphics::pixelcolor::Gray8;
 use embedded_graphics::prelude::DrawTarget;
 
+use crate::main_screen::MainScreen;
 use crate::screen_names::ScreenName;
-use crate::screens;
+use crate::settings_screen::SettingsScreen;
 
 pub struct ScreenManager {
-    pub main: screens::MainScreen,
-    pub settings: screens::SettingsScreen,
+    pub main: MainScreen,
+    pub settings: SettingsScreen,
     current_screen: ScreenName,
 }
 
 impl Default for ScreenManager {
     fn default() -> Self {
         Self {
-            main: screens::MainScreen::default(),
-            settings: screens::SettingsScreen::default(),
+            main: MainScreen::default(),
+            settings: SettingsScreen::default(),
             current_screen: ScreenName::Main,
         }
     }
