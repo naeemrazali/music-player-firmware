@@ -1,4 +1,5 @@
 pub mod display_config;
+pub mod event;
 pub mod screen_manager;
 pub mod screen_names;
 pub mod screens;

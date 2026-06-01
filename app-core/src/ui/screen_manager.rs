@@ -1,6 +1,8 @@
 use embedded_graphics::pixelcolor::Gray8;
 use embedded_graphics::prelude::DrawTarget;
 
+use crate::player::Player;
+use crate::ui::event::Event;
 use crate::ui::screen_names::ScreenName;
 use crate::ui::screens::main_screen::MainScreen;
 use crate::ui::screens::settings_screen::SettingsScreen;
@@ -22,21 +24,28 @@ impl Default for ScreenManager {
 }
 
 impl ScreenManager {
-    // change screen function (according to enum)
-    pub fn change_screen(&mut self, screen: ScreenName) {
-        self.current_screen = screen;
-    }
+    pub fn handle_event(
+        &mut self,
+        event: &Event,
+        player: &mut Player,
+    ) {
+        let next_screen = match self.current_screen {
+            ScreenName::Main => self.main.handle_event(event, player),
+            ScreenName::Settings => self.settings.handle_event(event, player),
+        };
 
-    // toggle between main and settings screen as a placeholder for now
-    pub fn toggle_screens(&mut self) {
-        if matches!(self.current_screen, ScreenName::Main) {
-            self.current_screen = ScreenName::Settings;
-        } else {
-            self.current_screen = ScreenName::Main;
+        if let Some(new_screen) = next_screen {
+            self.current_screen = new_screen;
         }
     }
 
-    // draw function
+    pub fn sync(&mut self, player: &Player) {
+        match self.current_screen {
+            ScreenName::Main => self.main.sync(player),
+            ScreenName::Settings => self.settings.sync(player),
+        }
+    }
+
     pub fn draw(
         &self,
         display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,

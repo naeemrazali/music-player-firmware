@@ -4,7 +4,10 @@ use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::Rectangle;
 
 use crate::player::playback_state::PlaybackState;
+use crate::player::Player;
 use crate::ui;
+use crate::ui::event::{Action, Button, Event};
+use crate::ui::screen_names::ScreenName;
 
 pub struct MainScreen {
     pub background: Gray8,
@@ -17,6 +20,33 @@ pub struct MainScreen {
 }
 
 impl MainScreen {
+    pub fn sync(&mut self, player: &Player) {
+        self.play_button.playback_state = if player.is_playing() {
+            PlaybackState::Playing
+        } else {
+            PlaybackState::Paused
+        };
+        self.progress.percent = player.progress_percent();
+        self.elapsed_time
+            .set_text(core::str::from_utf8(&ui::fmt_time_ms(player.elapsed_ms())).unwrap());
+        self.total_time
+            .set_text(core::str::from_utf8(&ui::fmt_time_ms(player.total_ms())).unwrap());
+    }
+
+    pub fn handle_event(
+        &mut self,
+        event: &Event,
+        player: &mut Player,
+    ) -> Option<ScreenName> {
+        match (event.button, event.action) {
+            (Button::Play, Action::Pressed) => {
+                player.toggle_playback();
+                None
+            }
+            (Button::Menu, Action::Pressed) => Some(ScreenName::Settings),
+        }
+    }
+
     pub fn draw(
         &self,
         display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,

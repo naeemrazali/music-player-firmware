@@ -3,7 +3,10 @@ use embedded_graphics::pixelcolor::Gray8;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::PrimitiveStyle;
 
+use crate::player::Player;
 use crate::ui;
+use crate::ui::event::{Action, Button, Event};
+use crate::ui::screen_names::ScreenName;
 
 pub struct SettingsScreen {
     pub background: Gray8,
@@ -13,6 +16,19 @@ pub struct SettingsScreen {
 }
 
 impl SettingsScreen {
+    pub fn sync(&mut self, _player: &Player) {}
+
+    pub fn handle_event(
+        &mut self,
+        event: &Event,
+        _player: &mut Player,
+    ) -> Option<ScreenName> {
+        match (event.button, event.action) {
+            (Button::Menu, Action::Pressed) => Some(ScreenName::Main),
+            _ => None,
+        }
+    }
+
     pub fn draw(
         &self,
         display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,

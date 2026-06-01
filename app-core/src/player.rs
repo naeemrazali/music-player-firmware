@@ -25,8 +25,12 @@ impl Player {
         self.state
     }
 
+    pub fn is_playing(&self) -> bool {
+        matches!(self.state, PlaybackState::Playing)
+    }
+
     pub fn tick(&mut self, delta_ms: u32) {
-        if matches!(self.state, PlaybackState::Playing) {
+        if self.is_playing() {
             self.elapsed_ms = self.elapsed_ms.saturating_add(delta_ms).min(self.total_ms);
         }
     }

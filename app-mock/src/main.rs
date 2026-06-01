@@ -6,11 +6,9 @@ use embedded_graphics_simulator::{
 };
 
 use app_core::player::Player;
-use app_core::ui;
 use app_core::ui::display_config::{DISPLAY_HEIGHT, DISPLAY_WIDTH, PIXEL_SCALE, PIXEL_SPACING};
+use app_core::ui::event::{Action, Button, Event};
 use app_core::ui::screen_manager::ScreenManager;
-
-use core::str::from_utf8;
 
 fn main() {
     let mut display: SimulatorDisplay<Gray8> =
@@ -23,7 +21,7 @@ fn main() {
 
     let mut window = Window::new(
         &format!(
-            "Audio Player Simulator  —  {DISPLAY_WIDTH}×{DISPLAY_HEIGHT}  ({PIXEL_SCALE}× scale)"
+            "Audio Player Simulator — {DISPLAY_WIDTH}×{DISPLAY_HEIGHT} ({PIXEL_SCALE}× scale)"
         ),
         &output_settings,
     );
@@ -34,16 +32,7 @@ fn main() {
     loop {
         player.tick(33);
 
-        screen_manager.main.progress.percent = player.progress_percent();
-        screen_manager
-            .main
-            .total_time
-            .set_text(from_utf8(&ui::fmt_time_ms(player.total_ms())).unwrap());
-        screen_manager
-            .main
-            .elapsed_time
-            .set_text(from_utf8(&ui::fmt_time_ms(player.elapsed_ms())).unwrap());
-
+        screen_manager.sync(&player);
         screen_manager.draw(&mut display);
         window.update(&display);
 
@@ -51,14 +40,22 @@ fn main() {
             match event {
                 SimulatorEvent::Quit => return,
 
-                SimulatorEvent::KeyDown { keycode, .. } => match keycode {
-                    Keycode::Space => {
-                        screen_manager.main.play_button.playback_state = player.toggle_playback()
+                SimulatorEvent::KeyDown { keycode, .. } => {
+                    let app_event = match keycode {
+                        Keycode::Space => Some(Event {
+                            button: Button::Play,
+                            action: Action::Pressed,
+                        }),
+                        Keycode::M => Some(Event {
+                            button: Button::Menu,
+                            action: Action::Pressed,
+                        }),
+                        _ => None,
+                    };
+                    if let Some(e) = app_event {
+                        screen_manager.handle_event(&e, &mut player);
                     }
-                    Keycode::M => screen_manager.toggle_screens(),
-                    Keycode::Escape => return,
-                    _ => {}
-                },
+                }
 
                 _ => {}
             }
