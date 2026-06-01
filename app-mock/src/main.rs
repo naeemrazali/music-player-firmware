@@ -5,10 +5,10 @@ use embedded_graphics_simulator::{
     OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
 };
 
-use app_core::display_config::{DISPLAY_HEIGHT, DISPLAY_WIDTH, PIXEL_SCALE, PIXEL_SPACING};
 use app_core::player::Player;
-use app_core::screen_manager::ScreenManager;
 use app_core::ui;
+use app_core::ui::display_config::{DISPLAY_HEIGHT, DISPLAY_WIDTH, PIXEL_SCALE, PIXEL_SPACING};
+use app_core::ui::screen_manager::ScreenManager;
 
 use core::str::from_utf8;
 

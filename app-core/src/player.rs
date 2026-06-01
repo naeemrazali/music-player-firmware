@@ -1,4 +1,6 @@
-use crate::playback_state::PlaybackState;
+pub mod playback_state;
+
+use playback_state::PlaybackState;
 
 pub struct Player {
     state: PlaybackState,

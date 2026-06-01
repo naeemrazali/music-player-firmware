@@ -1,9 +1,9 @@
 use embedded_graphics::pixelcolor::Gray8;
 use embedded_graphics::prelude::DrawTarget;
 
-use crate::main_screen::MainScreen;
-use crate::screen_names::ScreenName;
-use crate::settings_screen::SettingsScreen;
+use crate::ui::screen_names::ScreenName;
+use crate::ui::screens::main_screen::MainScreen;
+use crate::ui::screens::settings_screen::SettingsScreen;
 
 pub struct ScreenManager {
     pub main: MainScreen,

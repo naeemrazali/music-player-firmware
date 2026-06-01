@@ -3,7 +3,7 @@ use embedded_graphics::pixelcolor::Gray8;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::Rectangle;
 
-use crate::playback_state::PlaybackState;
+use crate::player::playback_state::PlaybackState;
 use crate::ui;
 
 pub struct MainScreen {

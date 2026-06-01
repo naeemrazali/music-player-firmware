@@ -1,3 +1,8 @@
+pub mod display_config;
+pub mod screen_manager;
+pub mod screen_names;
+pub mod screens;
+
 use embedded_graphics::{
     mono_font::{MonoTextStyle, ascii::FONT_6X10},
     pixelcolor::Gray8,
@@ -7,7 +12,7 @@ use embedded_graphics::{
 };
 use heapless::String;
 
-use crate::playback_state::PlaybackState;
+use crate::player::playback_state::PlaybackState;
 
 pub fn clear_background(
     display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
