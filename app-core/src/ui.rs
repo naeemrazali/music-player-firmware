@@ -13,8 +13,6 @@ use embedded_graphics::{
 };
 use heapless::String;
 
-use crate::player::playback_state::PlaybackState;
-
 pub fn clear_background(
     display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
     color: Gray8,
@@ -141,7 +139,7 @@ pub struct PlayButton {
     pub center: Point,
     pub radius: u32,
     pub color: Gray8,
-    pub playback_state: PlaybackState,
+    pub is_playing: bool,
 }
 
 impl PlayButton {
@@ -155,18 +153,19 @@ impl PlayButton {
             .build();
         draw_circle(display, self.center, self.radius, circle_style);
 
-        match self.playback_state {
-            PlaybackState::Playing => draw_pause_symbol(display, self.center, self.color),
-            PlaybackState::Paused => draw_play_symbol(display, self.center, self.color),
+        if self.is_playing {
+            draw_pause_symbol(display, self.center, self.color);
+        } else {
+            draw_play_symbol(display, self.center, self.color);
         }
     }
 
-    pub fn new(center: Point, radius: u32, color: Gray8, playback_state: PlaybackState) -> Self {
+    pub fn new(center: Point, radius: u32, color: Gray8, is_playing: bool) -> Self {
         Self {
             center,
             radius,
             color,
-            playback_state,
+            is_playing,
         }
     }
 }

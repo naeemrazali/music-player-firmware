@@ -3,7 +3,6 @@ use embedded_graphics::pixelcolor::Gray8;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::Rectangle;
 
-use crate::player::playback_state::PlaybackState;
 use crate::player::Player;
 use crate::ui;
 use crate::ui::event::{Action, Button, Event};
@@ -21,11 +20,7 @@ pub struct MainScreen {
 
 impl MainScreen {
     pub fn sync(&mut self, player: &Player) {
-        self.play_button.playback_state = if player.is_playing() {
-            PlaybackState::Playing
-        } else {
-            PlaybackState::Paused
-        };
+        self.play_button.is_playing = player.is_playing();
         self.progress.percent = player.progress_percent();
         self.elapsed_time
             .set_text(core::str::from_utf8(&ui::fmt_time_ms(player.elapsed_ms())).unwrap());
@@ -33,11 +28,7 @@ impl MainScreen {
             .set_text(core::str::from_utf8(&ui::fmt_time_ms(player.total_ms())).unwrap());
     }
 
-    pub fn handle_event(
-        &mut self,
-        event: &Event,
-        player: &mut Player,
-    ) -> Option<ScreenName> {
+    pub fn handle_event(&mut self, event: &Event, player: &mut Player) -> Option<ScreenName> {
         match (event.button, event.action) {
             (Button::Play, Action::Pressed) => {
                 player.toggle_playback();
@@ -91,12 +82,7 @@ impl Default for MainScreen {
                 Gray8::new(0xA0),
                 Gray8::BLACK,
             )),
-            play_button: (ui::PlayButton::new(
-                Point::new(120, 170),
-                12,
-                Gray8::BLACK,
-                PlaybackState::Playing,
-            )),
+            play_button: (ui::PlayButton::new(Point::new(120, 170), 12, Gray8::BLACK, false)),
         }
     }
 }
