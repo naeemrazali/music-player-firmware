@@ -1,6 +1,7 @@
-pub mod playback_state;
-
-use playback_state::PlaybackState;
+pub enum PlaybackState {
+    Playing,
+    Paused,
+}
 
 pub struct Player {
     state: PlaybackState,
@@ -17,12 +18,11 @@ impl Player {
         }
     }
 
-    pub fn toggle_playback(&mut self) -> PlaybackState {
+    pub fn toggle_playback(&mut self) {
         self.state = match self.state {
             PlaybackState::Playing => PlaybackState::Paused,
             PlaybackState::Paused => PlaybackState::Playing,
         };
-        self.state
     }
 
     pub fn is_playing(&self) -> bool {
