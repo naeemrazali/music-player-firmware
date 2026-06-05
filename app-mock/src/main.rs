@@ -30,10 +30,10 @@ fn main() {
 
     let mut playlist = Playlist::new();
     let _ = playlist.add(Track {
-        title:       "Clair de Lune",
-        artist:      "Claude Debussy",
+        title: "Clair de Lune",
+        artist: "Claude Debussy",
         duration_ms: 354000,
-        file_path:   "/music/flac/clair_de_lune.flac",
+        file_path: "/music/flac/clair_de_lune.flac",
     });
 
     let mut player = Player::new(playlist);
@@ -54,6 +54,16 @@ fn main() {
                     let app_event = match keycode {
                         Keycode::Space => Some(Event::ButtonPress(Button::Play)),
                         Keycode::M => Some(Event::ButtonPress(Button::Menu)),
+                        Keycode::Num1 => Some(Event::Seek(player.total_ms() / 10)),
+                        Keycode::Num2 => Some(Event::Seek(player.total_ms() * 2 / 10)),
+                        Keycode::Num3 => Some(Event::Seek(player.total_ms() * 3 / 10)),
+                        Keycode::Num4 => Some(Event::Seek(player.total_ms() * 4 / 10)),
+                        Keycode::Num5 => Some(Event::Seek(player.total_ms() * 5 / 10)),
+                        Keycode::Num6 => Some(Event::Seek(player.total_ms() * 6 / 10)),
+                        Keycode::Num7 => Some(Event::Seek(player.total_ms() * 7 / 10)),
+                        Keycode::Num8 => Some(Event::Seek(player.total_ms() * 8 / 10)),
+                        Keycode::Num9 => Some(Event::Seek(player.total_ms() * 9 / 10)),
+                        Keycode::Num0 => Some(Event::Seek(0)),
                         _ => None,
                     };
                     if let Some(e) = app_event {

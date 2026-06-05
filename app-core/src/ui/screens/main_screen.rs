@@ -39,6 +39,10 @@ impl MainScreen {
                 None
             }
             Event::ButtonPress(Button::Menu) => Some(ScreenName::Settings),
+            Event::Seek(ms) => {
+                player.seek_to(*ms);
+                None
+            }
         }
     }
 

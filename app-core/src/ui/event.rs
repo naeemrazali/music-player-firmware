@@ -6,4 +6,5 @@ pub enum Button {
 
 pub enum Event {
     ButtonPress(Button),
+    Seek(u32),
 }

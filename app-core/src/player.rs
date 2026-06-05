@@ -58,6 +58,10 @@ impl Player {
         (self.elapsed_ms * 100) / total
     }
 
+    pub fn seek_to(&mut self, ms: u32) {
+        self.elapsed_ms = ms.min(self.total_ms());
+    }
+
     pub fn current_track(&self) -> Option<&Track> {
         self.playlist.current()
     }
