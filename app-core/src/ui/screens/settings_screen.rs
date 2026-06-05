@@ -18,11 +18,7 @@ pub struct SettingsScreen {
 impl SettingsScreen {
     pub fn sync(&mut self, _player: &Player) {}
 
-    pub fn handle_event(
-        &mut self,
-        event: &Event,
-        _player: &mut Player,
-    ) -> Option<ScreenName> {
+    pub fn handle_event(&mut self, event: &Event, _player: &mut Player) -> Option<ScreenName> {
         match event {
             Event::ButtonPress(Button::Menu) => Some(ScreenName::Main),
             _ => None,

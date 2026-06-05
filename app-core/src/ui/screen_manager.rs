@@ -24,11 +24,7 @@ impl Default for ScreenManager {
 }
 
 impl ScreenManager {
-    pub fn handle_event(
-        &mut self,
-        event: &Event,
-        player: &mut Player,
-    ) {
+    pub fn handle_event(&mut self, event: &Event, player: &mut Player) {
         let next_screen = match self.current_screen {
             ScreenName::Main => self.main.handle_event(event, player),
             ScreenName::Settings => self.settings.handle_event(event, player),

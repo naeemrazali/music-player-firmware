@@ -44,10 +44,7 @@ impl Player {
     }
 
     pub fn total_ms(&self) -> u32 {
-        self.playlist
-            .current()
-            .map(|t| t.duration_ms)
-            .unwrap_or(0)
+        self.playlist.current().map(|t| t.duration_ms).unwrap_or(0)
     }
 
     pub fn progress_percent(&self) -> u32 {
