@@ -20,6 +20,10 @@ pub struct MainScreen {
 
 impl MainScreen {
     pub fn sync(&mut self, player: &Player) {
+        if let Some(track) = player.current_track() {
+            self.title.set_text(track.title);
+            self.artist.set_text(track.artist);
+        }
         self.play_button.is_playing = player.is_playing();
         self.progress.percent = player.progress_percent();
         self.elapsed_time
@@ -57,12 +61,12 @@ impl Default for MainScreen {
         Self {
             background: (Gray8::new(0x9F)),
             title: (ui::Label::new(
-                "Clair de Lune",
+                "",
                 Point::new(10, 20),
                 MonoTextStyle::new(&FONT_6X10, Gray8::BLACK),
             )),
             artist: (ui::Label::new(
-                "Claude Debussy",
+                "",
                 Point::new(10, 36),
                 MonoTextStyle::new(&FONT_6X10, Gray8::new(0x64)),
             )),

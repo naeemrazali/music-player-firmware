@@ -1,3 +1,5 @@
+use crate::track::Track;
+
 pub enum PlaybackState {
     Playing,
     Paused,
@@ -7,6 +9,7 @@ pub struct Player {
     state: PlaybackState,
     elapsed_ms: u32,
     total_ms: u32,
+    current_track: Track,
 }
 
 impl Player {
@@ -15,6 +18,12 @@ impl Player {
             state: PlaybackState::Playing,
             elapsed_ms: 0,
             total_ms,
+            current_track: Track {
+                title:       "Clair de Lune",
+                artist:      "Claude Debussy",
+                duration_ms: total_ms,
+                file_path:   "/music/flac/clair_de_lune.flac",
+            },
         }
     }
 
@@ -45,5 +54,9 @@ impl Player {
 
     pub fn progress_percent(&self) -> u32 {
         (self.elapsed_ms * 100) / self.total_ms
+    }
+
+    pub fn current_track(&self) -> Option<&Track> {
+        Some(&self.current_track)
     }
 }
