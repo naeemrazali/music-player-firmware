@@ -6,6 +6,8 @@ use embedded_graphics_simulator::{
 };
 
 use app_core::player::Player;
+use app_core::playlist::Playlist;
+use app_core::track::Track;
 use app_core::ui::display_config::{DISPLAY_HEIGHT, DISPLAY_WIDTH, PIXEL_SCALE, PIXEL_SPACING};
 use app_core::ui::event::{Action, Button, Event};
 use app_core::ui::screen_manager::ScreenManager;
@@ -26,7 +28,15 @@ fn main() {
         &output_settings,
     );
 
-    let mut player = Player::new(354000);
+    let mut playlist = Playlist::new();
+    let _ = playlist.add(Track {
+        title:       "Clair de Lune",
+        artist:      "Claude Debussy",
+        duration_ms: 354000,
+        file_path:   "/music/flac/clair_de_lune.flac",
+    });
+
+    let mut player = Player::new(playlist);
     let mut screen_manager = ScreenManager::default();
 
     loop {

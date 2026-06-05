@@ -1,3 +1,4 @@
+use crate::playlist::Playlist;
 use crate::track::Track;
 
 pub enum PlaybackState {
@@ -8,22 +9,15 @@ pub enum PlaybackState {
 pub struct Player {
     state: PlaybackState,
     elapsed_ms: u32,
-    total_ms: u32,
-    current_track: Track,
+    playlist: Playlist,
 }
 
 impl Player {
-    pub fn new(total_ms: u32) -> Self {
+    pub fn new(playlist: Playlist) -> Self {
         Self {
             state: PlaybackState::Playing,
             elapsed_ms: 0,
-            total_ms,
-            current_track: Track {
-                title:       "Clair de Lune",
-                artist:      "Claude Debussy",
-                duration_ms: total_ms,
-                file_path:   "/music/flac/clair_de_lune.flac",
-            },
+            playlist,
         }
     }
 
@@ -40,7 +34,8 @@ impl Player {
 
     pub fn tick(&mut self, delta_ms: u32) {
         if self.is_playing() {
-            self.elapsed_ms = self.elapsed_ms.saturating_add(delta_ms).min(self.total_ms);
+            let total = self.total_ms();
+            self.elapsed_ms = self.elapsed_ms.saturating_add(delta_ms).min(total);
         }
     }
 
@@ -49,14 +44,31 @@ impl Player {
     }
 
     pub fn total_ms(&self) -> u32 {
-        self.total_ms
+        self.playlist
+            .current()
+            .map(|t| t.duration_ms)
+            .unwrap_or(0)
     }
 
     pub fn progress_percent(&self) -> u32 {
-        (self.elapsed_ms * 100) / self.total_ms
+        let total = self.total_ms();
+        if total == 0 {
+            return 0;
+        }
+        (self.elapsed_ms * 100) / total
     }
 
     pub fn current_track(&self) -> Option<&Track> {
-        Some(&self.current_track)
+        self.playlist.current()
+    }
+
+    pub fn next_track(&mut self) {
+        let _ = self.playlist.next();
+        self.elapsed_ms = 0;
+    }
+
+    pub fn prev_track(&mut self) {
+        let _ = self.playlist.prev();
+        self.elapsed_ms = 0;
     }
 }
