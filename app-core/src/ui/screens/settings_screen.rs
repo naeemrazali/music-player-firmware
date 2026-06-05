@@ -5,7 +5,7 @@ use embedded_graphics::primitives::PrimitiveStyle;
 
 use crate::player::Player;
 use crate::ui;
-use crate::ui::event::{Action, Button, Event};
+use crate::ui::event::{Button, Event};
 use crate::ui::screen_names::ScreenName;
 
 pub struct SettingsScreen {
@@ -23,8 +23,8 @@ impl SettingsScreen {
         event: &Event,
         _player: &mut Player,
     ) -> Option<ScreenName> {
-        match (event.button, event.action) {
-            (Button::Menu, Action::Pressed) => Some(ScreenName::Main),
+        match event {
+            Event::ButtonPress(Button::Menu) => Some(ScreenName::Main),
             _ => None,
         }
     }

@@ -9,7 +9,7 @@ use app_core::player::Player;
 use app_core::playlist::Playlist;
 use app_core::track::Track;
 use app_core::ui::display_config::{DISPLAY_HEIGHT, DISPLAY_WIDTH, PIXEL_SCALE, PIXEL_SPACING};
-use app_core::ui::event::{Action, Button, Event};
+use app_core::ui::event::{Button, Event};
 use app_core::ui::screen_manager::ScreenManager;
 
 fn main() {
@@ -52,14 +52,8 @@ fn main() {
 
                 SimulatorEvent::KeyDown { keycode, .. } => {
                     let app_event = match keycode {
-                        Keycode::Space => Some(Event {
-                            button: Button::Play,
-                            action: Action::Pressed,
-                        }),
-                        Keycode::M => Some(Event {
-                            button: Button::Menu,
-                            action: Action::Pressed,
-                        }),
+                        Keycode::Space => Some(Event::ButtonPress(Button::Play)),
+                        Keycode::M => Some(Event::ButtonPress(Button::Menu)),
                         _ => None,
                     };
                     if let Some(e) = app_event {

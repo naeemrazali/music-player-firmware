@@ -4,12 +4,6 @@ pub enum Button {
     Menu,
 }
 
-#[derive(Copy, Clone)]
-pub enum Action {
-    Pressed,
-}
-
-pub struct Event {
-    pub button: Button,
-    pub action: Action,
+pub enum Event {
+    ButtonPress(Button),
 }

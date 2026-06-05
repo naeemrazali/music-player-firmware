@@ -5,7 +5,7 @@ use embedded_graphics::primitives::Rectangle;
 
 use crate::player::Player;
 use crate::ui;
-use crate::ui::event::{Action, Button, Event};
+use crate::ui::event::{Button, Event};
 use crate::ui::screen_names::ScreenName;
 
 pub struct MainScreen {
@@ -33,12 +33,12 @@ impl MainScreen {
     }
 
     pub fn handle_event(&mut self, event: &Event, player: &mut Player) -> Option<ScreenName> {
-        match (event.button, event.action) {
-            (Button::Play, Action::Pressed) => {
+        match event {
+            Event::ButtonPress(Button::Play) => {
                 player.toggle_playback();
                 None
             }
-            (Button::Menu, Action::Pressed) => Some(ScreenName::Settings),
+            Event::ButtonPress(Button::Menu) => Some(ScreenName::Settings),
         }
     }
 
