@@ -35,6 +35,12 @@ fn main() {
         duration_ms: 354000,
         file_path: "/music/flac/clair_de_lune.flac",
     });
+    let _ = playlist.add(Track {
+        title: "Gymnopédie No.1",
+        artist: "Erik Satie",
+        duration_ms: 210000,
+        file_path: "/music/flac/gymnopedie_no1.flac",
+    });
 
     let mut player = Player::new(playlist);
     let mut screen_manager = ScreenManager::default();
@@ -54,6 +60,8 @@ fn main() {
                     let app_event = match keycode {
                         Keycode::Space => Some(Event::ButtonPress(Button::Play)),
                         Keycode::M => Some(Event::ButtonPress(Button::Menu)),
+                        Keycode::N => Some(Event::ButtonPress(Button::Next)),
+                        Keycode::P => Some(Event::ButtonPress(Button::Prev)),
                         Keycode::Num1 => Some(Event::Seek(player.total_ms() / 10)),
                         Keycode::Num2 => Some(Event::Seek(player.total_ms() * 2 / 10)),
                         Keycode::Num3 => Some(Event::Seek(player.total_ms() * 3 / 10)),

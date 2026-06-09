@@ -2,6 +2,8 @@
 pub enum Button {
     Play,
     Menu,
+    Next,
+    Prev,
 }
 
 pub enum Event {

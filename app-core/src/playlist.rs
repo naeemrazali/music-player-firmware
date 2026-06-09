@@ -26,14 +26,21 @@ impl Playlist {
     pub fn next(&mut self) -> Option<&Track> {
         if self.current_index + 1 < self.tracks.len() {
             self.current_index += 1;
+            self.current()
+        } else {
+            None
         }
-        self.current()
     }
 
     pub fn prev(&mut self) -> Option<&Track> {
         if self.current_index > 0 {
             self.current_index -= 1;
+            self.current()
+        } else {
+            None
         }
-        self.current()
     }
 }
+
+#[cfg(test)]
+mod tests;

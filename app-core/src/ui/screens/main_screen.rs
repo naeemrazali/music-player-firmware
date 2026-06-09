@@ -39,6 +39,14 @@ impl MainScreen {
                 None
             }
             Event::ButtonPress(Button::Menu) => Some(ScreenName::Settings),
+            Event::ButtonPress(Button::Next) => {
+                player.next_track();
+                None
+            }
+            Event::ButtonPress(Button::Prev) => {
+                player.prev_track();
+                None
+            }
             Event::Seek(ms) => {
                 player.seek_to(*ms);
                 None

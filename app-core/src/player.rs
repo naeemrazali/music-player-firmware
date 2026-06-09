@@ -36,6 +36,17 @@ impl Player {
         if self.is_playing() {
             let total = self.total_ms();
             self.elapsed_ms = self.elapsed_ms.saturating_add(delta_ms).min(total);
+            if self.elapsed_ms == total && total > 0 {
+                self.advance_track_or_stop();
+            }
+        }
+    }
+
+    fn advance_track_or_stop(&mut self) {
+        if self.playlist.next().is_none() {
+            self.state = PlaybackState::Paused;
+        } else {
+            self.elapsed_ms = 0;
         }
     }
 
@@ -56,7 +67,11 @@ impl Player {
     }
 
     pub fn seek_to(&mut self, ms: u32) {
-        self.elapsed_ms = ms.min(self.total_ms());
+        let total = self.total_ms();
+        self.elapsed_ms = ms.min(total);
+        if self.elapsed_ms == total && total > 0 {
+            self.advance_track_or_stop();
+        }
     }
 
     pub fn current_track(&self) -> Option<&Track> {
@@ -73,3 +88,6 @@ impl Player {
         self.elapsed_ms = 0;
     }
 }
+
+#[cfg(test)]
+mod tests;
