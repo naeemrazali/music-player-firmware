@@ -38,11 +38,11 @@ fn multi_track_navigation() {
     assert_eq!(p.current().unwrap().title, "A");
     assert_eq!(p.next().unwrap().title, "B");
     assert_eq!(p.next().unwrap().title, "C");
-    assert!(p.next().is_none());          // end of playlist
+    assert!(p.next().is_none()); // end of playlist
     assert_eq!(p.current().unwrap().title, "C"); // stayed at C
 
     assert_eq!(p.prev().unwrap().title, "B");
     assert_eq!(p.prev().unwrap().title, "A");
-    assert!(p.prev().is_none());          // start of playlist
+    assert!(p.prev().is_none()); // start of playlist
     assert_eq!(p.current().unwrap().title, "A"); // stayed at A
 }
