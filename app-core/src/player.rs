@@ -1,24 +1,23 @@
+use heapless::Vec;
+
 use crate::playlist::Playlist;
 use crate::track::Track;
 use crate::ui::event::{Event, Playback};
 
-pub enum PlaybackState {
-    Playing,
-    Paused,
-}
-
 pub struct Player {
-    state: PlaybackState,
+    is_playing: bool,
     elapsed_ms: u32,
     playlist: Playlist,
+    events: Vec<Event, 8>,
 }
 
 impl Player {
     pub fn new(playlist: Playlist) -> Self {
         Self {
-            state: PlaybackState::Playing,
+            is_playing: false,
             elapsed_ms: 0,
             playlist,
+            events: Vec::new(),
         }
     }
 
@@ -29,31 +28,50 @@ impl Player {
             Event::Player(Playback::Seek(ms)) => self.seek_to(*ms),
             Event::Player(Playback::NextTrack) => self.next_track(),
             Event::Player(Playback::PreviousTrack) => self.prev_track(),
+            Event::Player(Playback::Stop) => self.stop(),
+            Event::Player(Playback::Toggle) => self.toggle_playback(),
             _ => (),
         }
     }
 
+    pub fn event_queue(&mut self) -> Vec<Event, 8> {
+        let mut queue = Vec::new();
+        core::mem::swap(&mut self.events, &mut queue);
+        queue
+    }
+
+    fn add_event(&mut self, event: Event) {
+        let _ = self.events.push(event);
+    }
+
     fn play(&mut self) {
-        self.state = PlaybackState::Playing;
+        self.is_playing = true;
     }
 
     fn pause(&mut self) {
-        self.state = PlaybackState::Paused;
+        self.is_playing = false;
     }
 
-    pub fn toggle_playback(&mut self) {
-        self.state = match self.state {
-            PlaybackState::Playing => PlaybackState::Paused,
-            PlaybackState::Paused => PlaybackState::Playing,
+    fn stop(&mut self) {
+        self.pause();
+        self.playlist = Playlist::new();
+        self.add_event(Event::Player(Playback::Stopped));
+    }
+
+    fn toggle_playback(&mut self) {
+        match self.is_playing {
+            true => self.pause(),
+            false => self.play(),
         };
+        self.add_event(Event::Player(Playback::Toggled(self.is_playing)));
     }
 
-    pub fn is_playing(&self) -> bool {
-        matches!(self.state, PlaybackState::Playing)
+    fn is_playing(&self) -> bool {
+        self.is_playing
     }
 
     pub fn tick(&mut self, delta_ms: u32) {
-        if self.is_playing() {
+        if self.is_playing {
             let total = self.total_ms();
             self.elapsed_ms = self.elapsed_ms.saturating_add(delta_ms).min(total);
             if self.elapsed_ms == total && total > 0 {
@@ -64,21 +82,21 @@ impl Player {
 
     fn advance_track_or_stop(&mut self) {
         if self.playlist.next().is_none() {
-            self.state = PlaybackState::Paused;
+            self.stop();
         } else {
-            self.elapsed_ms = 0;
+            self.next_track();
         }
     }
 
-    pub fn elapsed_ms(&self) -> u32 {
+    fn elapsed_ms(&self) -> u32 {
         self.elapsed_ms
     }
 
-    pub fn total_ms(&self) -> u32 {
+    fn total_ms(&self) -> u32 {
         self.playlist.current().map(|t| t.duration_ms).unwrap_or(0)
     }
 
-    pub fn progress_percent(&self) -> u32 {
+    fn progress_percent(&self) -> u32 {
         let total = self.total_ms();
         if total == 0 {
             return 0;
@@ -86,26 +104,32 @@ impl Player {
         (self.elapsed_ms * 100) / total
     }
 
-    pub fn seek_to(&mut self, ms: u32) {
+    fn seek_to(&mut self, ms: u32) {
         let total = self.total_ms();
         self.elapsed_ms = ms.min(total);
+        self.add_event(Event::Player(Playback::ProgressUpdated {
+            elapsed_ms: self.elapsed_ms,
+            percent_elapsed: self.progress_percent(),
+        }));
         if self.elapsed_ms == total && total > 0 {
             self.advance_track_or_stop();
         }
     }
 
-    pub fn current_track(&self) -> Option<&Track> {
+    fn current_track(&self) -> Option<&Track> {
         self.playlist.current()
     }
 
-    pub fn next_track(&mut self) {
-        let _ = self.playlist.next();
+    fn next_track(&mut self) {
+        let track = self.playlist.next().copied();
         self.elapsed_ms = 0;
+        self.add_event(Event::Player(Playback::TrackChanged(track)));
     }
 
-    pub fn prev_track(&mut self) {
-        let _ = self.playlist.prev();
+    fn prev_track(&mut self) {
+        let track = self.playlist.prev().copied();
         self.elapsed_ms = 0;
+        self.add_event(Event::Player(Playback::TrackChanged(track)));
     }
 }
 
