@@ -1,5 +1,6 @@
 use crate::playlist::Playlist;
 use crate::track::Track;
+use crate::ui::event::{Event, Playback};
 
 pub enum PlaybackState {
     Playing,
@@ -19,6 +20,25 @@ impl Player {
             elapsed_ms: 0,
             playlist,
         }
+    }
+
+    pub fn handle_event(&mut self, event: &Event) {
+        match event {
+            Event::Player(Playback::Play) => self.play(),
+            Event::Player(Playback::Pause) => self.pause(),
+            Event::Player(Playback::Seek(ms)) => self.seek_to(*ms),
+            Event::Player(Playback::NextTrack) => self.next_track(),
+            Event::Player(Playback::PreviousTrack) => self.prev_track(),
+            _ => (),
+        }
+    }
+
+    fn play(&mut self) {
+        self.state = PlaybackState::Playing;
+    }
+
+    fn pause(&mut self) {
+        self.state = PlaybackState::Paused;
     }
 
     pub fn toggle_playback(&mut self) {
