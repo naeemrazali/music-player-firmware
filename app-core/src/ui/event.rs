@@ -6,7 +6,16 @@ pub enum Button {
     Prev,
 }
 
+pub enum Playback {
+    Play,
+    Pause,
+    Seek(u32),
+    NextTrack,
+    PreviousTrack,
+    Stop,
+}
+
 pub enum Event {
     ButtonPress(Button),
-    Seek(u32),
+    Player(Playback),
 }
