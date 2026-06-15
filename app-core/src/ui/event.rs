@@ -18,4 +18,5 @@ pub enum Playback {
 pub enum Event {
     ButtonPress(Button),
     Player(Playback),
+    RefreshScreen,
 }
