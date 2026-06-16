@@ -109,7 +109,7 @@ impl Player {
 
     fn seek_to(&mut self, percent: u32) {
         let total = self.total_ms();
-        let elapsed_ms = (percent * total).min(total);
+        let elapsed_ms = ((percent * total) / 100).min(total);
 
         self.elapsed_ms = elapsed_ms;
         self.add_event(Event::Player(Playback::ProgressUpdated {
