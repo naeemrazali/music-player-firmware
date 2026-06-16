@@ -1,5 +1,6 @@
 use crate::event::{Event, Playback};
 use crate::playlist::Playlist;
+use crate::track::Track;
 
 pub struct Player {
     is_playing: bool,
@@ -26,6 +27,17 @@ impl Player {
             Event::Player(Playback::Stop) => self.stop(),
             Event::Player(Playback::Toggle) => self.toggle_playback(),
             _ => (),
+        }
+    }
+
+    pub fn initialize(&mut self) {
+        let track = self.playlist.current().copied();
+        self.add_event(Event::Player(Playback::TrackChanged(track)));
+        if track.is_some() {
+            self.add_event(Event::Player(Playback::ProgressUpdated {
+                elapsed_ms: self.elapsed_ms,
+                percent_elapsed: self.percent_elapsed(),
+            }));
         }
     }
 
