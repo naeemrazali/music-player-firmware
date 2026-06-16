@@ -7,6 +7,11 @@ Embedded Rust portable audio player built on the **STM32H7A3VI** microcontroller
 (MP3 and FLAC), and streamed as PCM over **SAI** to an **AK4377** DAC/headphone amplifier
 chip which handles digital-to-analogue conversion and drives the headphones.
 
+The UI and player logic communicate via an **actor-model event system** using
+`heapless::Vec<Event, 8>` internal queues. Embassy `Channel` / `Signal` will bridge
+these queues between async tasks on the STM32. The desktop simulator validates this
+pattern with a single-threaded event cascade.
+
 A desktop **mock** crate mirrors the embedded display using `embedded-graphics-simulator`
 so UI code can be developed and tested without hardware.
 
@@ -62,10 +67,20 @@ music-player-firmware/
 │
 ├── app-core/                       # Pure business logic — no hardware dependencies
 │   └── src/
-│       ├── display_config.rs       # DISPLAY_WIDTH, DISPLAY_HEIGHT, PIXEL_SCALE
-│       ├── player.rs               # Playback state machine
-│       ├── screens.rs              # Screen composition (MainScreen, SettingsScreen)
-│       └── ui.rs                   # Widget primitives (Label, ProgressBar, PlayButton, List)
+│       ├── event.rs              # Unified Event enum (ButtonPress, Player, Ui)
+│       ├── player.rs             # Playback actor — emits events, owns state
+│       ├── player/
+│       │   └── tests.rs          # Player unit tests (submodule pattern)
+│       ├── playlist.rs           # Fixed-capacity track list
+│       ├── playlist/
+│       │   └── tests.rs          # Playlist unit tests (submodule pattern)
+│       ├── track.rs              # Track metadata (Copy)
+│       └── ui/
+│           ├── screen_manager.rs # Routes events to active screen
+│           ├── screens/
+│           │   ├── main_screen.rs
+│           │   └── settings_screen.rs
+│           └── ...               # Widgets, display config
 │
 ├── app-firmware/                   # Embassy firmware — STM32 target only
 │   ├── .cargo/config.toml          # [build] target = "thumbv7em-none-eabihf" ONLY HERE
@@ -83,7 +98,8 @@ music-player-firmware/
     ├── .cargo/                     # No config.toml here — inherits host target
     ├── Cargo.toml                  # edition = "2024"
     └── src/
-        ├── main.rs                 # SDL2 window, event loop, keyboard shortcuts
+        └── main.rs               # SDL2 + single-threaded event cascade
+                                    # Simulates player_task / ui_task roles
 ```
 
 ---
@@ -109,6 +125,16 @@ music-player-firmware/
 
 6. **Symphonia requires a global allocator** — `embedded-alloc` is used. Budget ~64KB
    for the heap. FLAC and MP3 are safe; AAC/Opus are marginal at this heap size.
+
+7. **Actor model for UI/Player communication.** `Player` owns its state
+   exclusively. Other modules send commands via `Event::Player(...)` and
+   receive state changes via events emitted into a bounded `heapless::Vec`.
+   No module accesses `Player` fields directly.
+
+8. **Unit tests live in sibling submodules, never inline.** Place tests in
+   `src/<module>/tests.rs` and declare them with `#[cfg(test)] mod tests;`
+   inside `src/<module>.rs`. This keeps source files readable while retaining
+   `use super::*` access to private items.
 
 ---
 
@@ -203,12 +229,14 @@ Mock implementations live in `app-mock::mock-file-reader` and
 
 - **Pixel colour:** `Gray8` — grayscale pixels. Chosen to match the target monochrome LCD display.
 - **Placeholder resolution:** 240×240. Change `DISPLAY_WIDTH` / `DISPLAY_HEIGHT` in
-  `src/display_config.rs` once the real display is chosen.
+  `ui/display_config.rs` once the real display is chosen.
 - **Scale:** `PIXEL_SCALE = 3` — zooms the desktop window to a comfortable size.
 - **Keyboard shortcuts in simulator:**
   - `Space` — toggle play/pause
-  - `Right arrow` — skip forward 5 seconds
-  - `Left arrow` — rewind 5 seconds
+  - `M` — open Settings
+  - `N` — next track
+  - `P` — previous track
+  - `0`–`9` — seek to 0%–90%
   - `Escape / close` — quit
 - **SDL2 required on host:**
 
@@ -239,11 +267,39 @@ cargo test -p app-hal -p app-core
 
 ---
 
+## Event Architecture
+
+All inter-module communication uses a unified `Event` enum:
+
+```rust
+pub enum Event {
+    ButtonPress(Button),            // Input layer (SDL2 / GPIO)
+    Player(Playback),               // Commands to Player, or state changes from Player
+    Ui(Screen),                     // Screen transitions, refresh requests
+}
+```
+
+### Actor boundaries
+
+| Actor | Owned by | Receives | Emits |
+|---|---|---|---|
+| **Player** | `player_task` | `Event::Player(Playback::*)` commands | `TrackChanged`, `Toggled`, `ProgressUpdated`, `Stopped` |
+| **Active Screen** | `ui_task` | `ButtonPress`, `Player` events | `Player` commands, `Ui(Refresh)`, `Ui(Change)` |
+| **ScreenManager** | `ui_task` | `Ui(Change)` | Routes events to active screen |
+
+### Initialization
+
+`Player::initialize()` is called once at startup to emit the initial
+`TrackChanged`, `Toggled`, and `ProgressUpdated` events, bootstrapping the
+first draw without a special-case initial-sync path.
+
+---
+
 ## Milestones
 
 - [x] **Milestone 1** Retained-mode GUI framework (`app-core` + `app-mock`) — widget structs (`Label`, `ProgressBar`, `PlayButton`, `List`), screen composition via `Default`, `app-mock` update/sync/draw loop with keyboard navigation
-- [ ] **Milestone 2** Player state machine + playlist logic (`app-core`, host-tested)
-- [ ] **Milestone 3** Transport controls + progress bar UI
+- [x] **Milestone 2** Player state machine + playlist logic (`app-core`, host-tested) — actor model with event-driven state changes, auto-advance, next/prev
+- [x] **Milestone 3** Transport controls + progress bar UI (event-driven, auto-advance) — single-threaded event cascade in `app-mock` simulates Embassy tasks
 - [ ] **Milestone 4** FLAC decode via Symphonia (desktop end-to-end)
 - [ ] **Milestone 5** HAL traits + mocks (`app-hal`)
 - [ ] **Milestone 6** Hardware bringup (STM32 boot, LED blink, RTT logs)
