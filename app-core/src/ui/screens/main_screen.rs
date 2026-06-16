@@ -71,8 +71,8 @@ impl MainScreen {
             Event::ButtonPress(Button::Prev) => {
                 self.add_event(Event::Player(Playback::PreviousTrack));
             }
-            Event::ButtonPress(Button::Seek(ms)) => {
-                self.add_event(Event::Player(Playback::Seek(*ms)));
+            Event::ButtonPress(Button::Seek(percent)) => {
+                self.add_event(Event::Player(Playback::Seek(*percent)));
             }
             Event::Player(Playback::TrackChanged(track)) => {
                 self.sync_new_track(track);
