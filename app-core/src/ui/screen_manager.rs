@@ -1,4 +1,7 @@
-use crate::event::Event;
+use embedded_graphics::pixelcolor::Gray8;
+use embedded_graphics::prelude::*;
+
+use crate::event::{Event, Screen};
 use crate::ui::screen_names::ScreenName;
 use crate::ui::screens::main_screen::MainScreen;
 use crate::ui::screens::settings_screen::SettingsScreen;
@@ -21,13 +24,19 @@ impl Default for ScreenManager {
 
 impl ScreenManager {
     pub fn handle_event(&mut self, event: &Event) {
-        let next_screen = match self.current_screen {
-            ScreenName::Main => self.main.handle_event(event),
-            ScreenName::Settings => self.settings.handle_event(event),
-        };
+        match event {
+            Event::Ui(Screen::Change(screen)) => self.current_screen = *screen,
+            _ => (),
+        }
+    }
 
-        if let Some(new_screen) = next_screen {
-            self.current_screen = new_screen;
+    pub fn draw(
+        &self,
+        display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
+    ) {
+        match self.current_screen {
+            ScreenName::Main => self.main.draw(display),
+            ScreenName::Settings => self.settings.draw(display),
         }
     }
 }
