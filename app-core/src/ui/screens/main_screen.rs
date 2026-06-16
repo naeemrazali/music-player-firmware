@@ -19,42 +19,6 @@ pub struct MainScreen {
     events: heapless::Vec<Event, 8>,
 }
 
-impl Default for MainScreen {
-    fn default() -> Self {
-        Self {
-            background: (Gray8::new(0x9F)),
-            title: (ui::Label::new(
-                "",
-                Point::new(10, 20),
-                MonoTextStyle::new(&FONT_6X10, Gray8::BLACK),
-            )),
-            artist: (ui::Label::new(
-                "",
-                Point::new(10, 36),
-                MonoTextStyle::new(&FONT_6X10, Gray8::new(0x64)),
-            )),
-            elapsed_time: (ui::Label::new(
-                "00:00",
-                Point::new(10, 112),
-                MonoTextStyle::new(&FONT_6X10, Gray8::new(0x64)),
-            )),
-            total_time: (ui::Label::new(
-                "03:00",
-                Point::new(200, 112),
-                MonoTextStyle::new(&FONT_6X10, Gray8::new(0x64)),
-            )),
-            progress: (ui::ProgressBar::new(
-                Rectangle::new(Point::new(10, 100), Size::new(220, 6)),
-                50,
-                Gray8::new(0xA0),
-                Gray8::BLACK,
-            )),
-            play_button: (ui::PlayButton::new(Point::new(120, 170), 12, Gray8::BLACK, false)),
-            events: heapless::Vec::new(),
-        }
-    }
-}
-
 impl MainScreen {
     pub fn handle_event(&mut self, event: &Event) {
         match event {
@@ -142,5 +106,41 @@ impl MainScreen {
 
     fn update_play_button(&mut self, is_playing: bool) {
         self.play_button.is_playing = is_playing;
+    }
+}
+
+impl Default for MainScreen {
+    fn default() -> Self {
+        Self {
+            background: (Gray8::new(0x9F)),
+            title: (ui::Label::new(
+                "",
+                Point::new(10, 20),
+                MonoTextStyle::new(&FONT_6X10, Gray8::BLACK),
+            )),
+            artist: (ui::Label::new(
+                "",
+                Point::new(10, 36),
+                MonoTextStyle::new(&FONT_6X10, Gray8::new(0x64)),
+            )),
+            elapsed_time: (ui::Label::new(
+                "00:00",
+                Point::new(10, 112),
+                MonoTextStyle::new(&FONT_6X10, Gray8::new(0x64)),
+            )),
+            total_time: (ui::Label::new(
+                "03:00",
+                Point::new(200, 112),
+                MonoTextStyle::new(&FONT_6X10, Gray8::new(0x64)),
+            )),
+            progress: (ui::ProgressBar::new(
+                Rectangle::new(Point::new(10, 100), Size::new(220, 6)),
+                50,
+                Gray8::new(0xA0),
+                Gray8::BLACK,
+            )),
+            play_button: (ui::PlayButton::new(Point::new(120, 170), 12, Gray8::BLACK, false)),
+            events: heapless::Vec::new(),
+        }
     }
 }

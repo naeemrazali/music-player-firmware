@@ -5,11 +5,11 @@ use embedded_graphics_simulator::{
     OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
 };
 
+use app_core::event::{Button, Event};
 use app_core::player::Player;
 use app_core::playlist::Playlist;
 use app_core::track::Track;
 use app_core::ui::display_config::{DISPLAY_HEIGHT, DISPLAY_WIDTH, PIXEL_SCALE, PIXEL_SPACING};
-use app_core::ui::event::{Button, Event};
 use app_core::ui::screen_manager::ScreenManager;
 
 fn main() {
@@ -62,16 +62,16 @@ fn main() {
                         Keycode::M => Some(Event::ButtonPress(Button::Menu)),
                         Keycode::N => Some(Event::ButtonPress(Button::Next)),
                         Keycode::P => Some(Event::ButtonPress(Button::Prev)),
-                        Keycode::Num1 => Some(Event::Seek(player.total_ms() / 10)),
-                        Keycode::Num2 => Some(Event::Seek(player.total_ms() * 2 / 10)),
-                        Keycode::Num3 => Some(Event::Seek(player.total_ms() * 3 / 10)),
-                        Keycode::Num4 => Some(Event::Seek(player.total_ms() * 4 / 10)),
-                        Keycode::Num5 => Some(Event::Seek(player.total_ms() * 5 / 10)),
-                        Keycode::Num6 => Some(Event::Seek(player.total_ms() * 6 / 10)),
-                        Keycode::Num7 => Some(Event::Seek(player.total_ms() * 7 / 10)),
-                        Keycode::Num8 => Some(Event::Seek(player.total_ms() * 8 / 10)),
-                        Keycode::Num9 => Some(Event::Seek(player.total_ms() * 9 / 10)),
-                        Keycode::Num0 => Some(Event::Seek(0)),
+                        Keycode::Num1 => Some(Event::ButtonPress(Button::Seek(10))),
+                        Keycode::Num2 => Some(Event::ButtonPress(Button::Seek(20))),
+                        Keycode::Num3 => Some(Event::ButtonPress(Button::Seek(30))),
+                        Keycode::Num4 => Some(Event::ButtonPress(Button::Seek(40))),
+                        Keycode::Num5 => Some(Event::ButtonPress(Button::Seek(50))),
+                        Keycode::Num6 => Some(Event::ButtonPress(Button::Seek(60))),
+                        Keycode::Num7 => Some(Event::ButtonPress(Button::Seek(70))),
+                        Keycode::Num8 => Some(Event::ButtonPress(Button::Seek(80))),
+                        Keycode::Num9 => Some(Event::ButtonPress(Button::Seek(90))),
+                        Keycode::Num0 => Some(Event::ButtonPress(Button::Seek(0))),
                         _ => None,
                     };
                     if let Some(e) = app_event {

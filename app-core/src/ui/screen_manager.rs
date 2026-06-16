@@ -26,7 +26,10 @@ impl ScreenManager {
     pub fn handle_event(&mut self, event: &Event) {
         match event {
             Event::Ui(Screen::Change(screen)) => self.current_screen = *screen,
-            _ => (),
+            _ => match self.current_screen {
+                ScreenName::Main => self.main.handle_event(event),
+                ScreenName::Settings => self.settings.handle_event(event),
+            },
         }
     }
 
