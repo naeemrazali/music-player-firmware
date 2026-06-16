@@ -61,7 +61,6 @@ impl Player {
 
     fn stop(&mut self) {
         self.pause();
-        self.playlist = Playlist::new();
         self.add_event(Event::Player(Playback::Stopped));
     }
 
