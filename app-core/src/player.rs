@@ -1,6 +1,5 @@
 use crate::event::{Event, Playback};
 use crate::playlist::Playlist;
-use crate::track::Track;
 
 pub struct Player {
     is_playing: bool,
@@ -81,7 +80,7 @@ impl Player {
                 percent_elapsed: self.percent_elapsed(),
             }));
             if self.elapsed_ms == total && total > 0 {
-                self.advance_track_or_stop();
+                self.next_track();
             }
         }
     }
@@ -92,14 +91,6 @@ impl Player {
             return 0;
         }
         (self.elapsed_ms * 100) / total
-    }
-
-    fn advance_track_or_stop(&mut self) {
-        if self.playlist.next().is_none() {
-            self.stop();
-        } else {
-            self.next_track();
-        }
     }
 
     fn total_ms(&self) -> u32 {
@@ -116,20 +107,34 @@ impl Player {
             percent_elapsed: percent,
         }));
         if elapsed_ms == total && total > 0 {
-            self.advance_track_or_stop();
+            self.next_track();
         }
     }
 
     fn next_track(&mut self) {
         let track = self.playlist.next().copied();
-        self.elapsed_ms = 0;
-        self.add_event(Event::Player(Playback::TrackChanged(track)));
+        match track {
+            Some(_) => {
+                self.elapsed_ms = 0;
+                self.add_event(Event::Player(Playback::TrackChanged(track)));
+            }
+            None => {
+                self.stop();
+            }
+        }
     }
 
     fn prev_track(&mut self) {
         let track = self.playlist.prev().copied();
-        self.elapsed_ms = 0;
-        self.add_event(Event::Player(Playback::TrackChanged(track)));
+        match track {
+            Some(_) => {
+                self.elapsed_ms = 0;
+                self.add_event(Event::Player(Playback::TrackChanged(track)));
+            }
+            None => {
+                self.stop();
+            }
+        }
     }
 }
 
