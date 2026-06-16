@@ -1,4 +1,4 @@
-use crate::track::Track;
+use crate::{track::Track, ui::screen_names::ScreenName};
 
 #[derive(Copy, Clone)]
 pub enum Button {
@@ -6,11 +6,12 @@ pub enum Button {
     Menu,
     Next,
     Prev,
+    Seek(u32),
 }
 
 pub enum Playback {
-    Play,
-    Pause,
+    Toggle,
+    Stopped,
     Seek(u32),
     NextTrack,
     PreviousTrack,
@@ -21,12 +22,15 @@ pub enum Playback {
         elapsed_ms: u32,
         percent_elapsed: u32,
     },
-    Toggle,
-    Stopped,
+}
+
+pub enum Screen {
+    Refresh,
+    Change(ScreenName),
 }
 
 pub enum Event {
     ButtonPress(Button),
     Player(Playback),
-    RefreshScreen,
+    Ui(Screen),
 }
