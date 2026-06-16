@@ -2,7 +2,6 @@ use embedded_graphics::mono_font::{MonoTextStyle, ascii::FONT_6X10};
 use embedded_graphics::pixelcolor::Gray8;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::Rectangle;
-use heapless::Vec;
 
 use crate::event::{Button, Event, Playback, Screen};
 use crate::track::Track;
@@ -17,7 +16,7 @@ pub struct MainScreen {
     total_time: ui::Label<'static>,
     progress: ui::ProgressBar,
     play_button: ui::PlayButton,
-    events: Vec<Event, 8>,
+    events: heapless::Vec<Event, 8>,
 }
 
 impl Default for MainScreen {
@@ -51,7 +50,7 @@ impl Default for MainScreen {
                 Gray8::BLACK,
             )),
             play_button: (ui::PlayButton::new(Point::new(120, 170), 12, Gray8::BLACK, false)),
-            events: Vec::new(),
+            events: heapless::Vec::new(),
         }
     }
 }
@@ -63,7 +62,8 @@ impl MainScreen {
                 self.add_event(Event::Player(Playback::Toggle));
             }
             Event::ButtonPress(Button::Menu) => {
-                self.add_event(Event::Ui(Screen::Change(ScreenName::Settings)))
+                self.add_event(Event::Ui(Screen::Change(ScreenName::Settings)));
+                self.add_event(Event::Ui(Screen::Refresh));
             }
             Event::ButtonPress(Button::Next) => {
                 self.add_event(Event::Player(Playback::NextTrack));
@@ -93,8 +93,8 @@ impl MainScreen {
         }
     }
 
-    pub fn event_queue(&mut self) -> Vec<Event, 8> {
-        let mut queue = Vec::new();
+    pub fn event_queue(&mut self) -> heapless::Vec<Event, 8> {
+        let mut queue = heapless::Vec::new();
         core::mem::swap(&mut self.events, &mut queue);
         queue
     }
@@ -103,7 +103,10 @@ impl MainScreen {
         let _ = self.events.push(event);
     }
 
-    fn draw(&self, display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>) {
+    pub fn draw(
+        &self,
+        display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
+    ) {
         ui::clear_background(display, self.background);
         self.title.draw(display);
         self.artist.draw(display);
@@ -113,7 +116,7 @@ impl MainScreen {
         self.play_button.draw(display);
     }
 
-    pub fn sync_new_track(&mut self, track: &Option<Track>) {
+    fn sync_new_track(&mut self, track: &Option<Track>) {
         match track {
             Some(track) => {
                 self.title.set_text(track.title);
