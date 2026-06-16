@@ -3,26 +3,36 @@ use embedded_graphics::pixelcolor::Gray8;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::PrimitiveStyle;
 
-use crate::player::Player;
+use crate::event::{Button, Event, Screen};
 use crate::ui;
-use crate::ui::event::{Button, Event};
 use crate::ui::screen_names::ScreenName;
 
 pub struct SettingsScreen {
-    pub background: Gray8,
-    pub heading: ui::Label<'static>,
-    pub separator: ui::HorizontalLine,
-    pub list: ui::List<'static>,
+    background: Gray8,
+    heading: ui::Label<'static>,
+    separator: ui::HorizontalLine,
+    list: ui::List<'static>,
+    events: heapless::Vec<Event, 8>,
 }
 
 impl SettingsScreen {
-    pub fn sync(&mut self, _player: &Player) {}
-
-    pub fn handle_event(&mut self, event: &Event, _player: &mut Player) -> Option<ScreenName> {
+    pub fn handle_event(&mut self, event: &Event) {
         match event {
-            Event::ButtonPress(Button::Menu) => Some(ScreenName::Main),
-            _ => None,
+            Event::ButtonPress(Button::Menu) => {
+                self.add_event(Event::Ui(Screen::Change(ScreenName::Main)))
+            }
+            _ => (),
         }
+    }
+
+    pub fn event_queue(&mut self) -> heapless::Vec<Event, 8> {
+        let mut queue = heapless::Vec::new();
+        core::mem::swap(&mut self.events, &mut queue);
+        queue
+    }
+
+    fn add_event(&mut self, event: Event) {
+        let _ = self.events.push(event);
     }
 
     pub fn draw(
@@ -60,6 +70,7 @@ impl Default for SettingsScreen {
                 selected_prefix: "> ",
                 unselected_prefix: "  ",
             },
+            events: heapless::Vec::new(),
         }
     }
 }
