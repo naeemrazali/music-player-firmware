@@ -33,6 +33,13 @@ impl ScreenManager {
         }
     }
 
+    pub fn event_queue(&mut self) -> heapless::Vec<Event, 8> {
+        match self.current_screen {
+            ScreenName::Main => self.main.event_queue(),
+            ScreenName::Settings => self.settings.event_queue(),
+        }
+    }
+
     pub fn draw(
         &self,
         display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
