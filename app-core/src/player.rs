@@ -1,6 +1,5 @@
 use crate::event::{Event, Playback};
 use crate::playlist::Playlist;
-use crate::track::Track;
 
 pub struct Player {
     is_playing: bool,
@@ -66,10 +65,22 @@ impl Player {
         if self.is_playing {
             let total = self.total_ms();
             self.elapsed_ms = self.elapsed_ms.saturating_add(delta_ms).min(total);
+            self.add_event(Event::Player(Playback::ProgressUpdated {
+                elapsed_ms: self.elapsed_ms,
+                percent_elapsed: self.percent_elapsed(),
+            }));
             if self.elapsed_ms == total && total > 0 {
                 self.advance_track_or_stop();
             }
         }
+    }
+
+    fn percent_elapsed(&self) -> u32 {
+        let total = self.total_ms();
+        if total == 0 {
+            return 0;
+        }
+        (self.elapsed_ms * 100) / total
     }
 
     fn advance_track_or_stop(&mut self) {
