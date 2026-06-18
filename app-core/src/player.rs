@@ -11,7 +11,7 @@ pub struct Player {
 impl Player {
     pub fn new(playlist: Playlist) -> Self {
         Self {
-            is_playing: false,
+            is_playing: true,
             elapsed_ms: 0,
             playlist,
             events: heapless::Vec::new(),
@@ -32,6 +32,7 @@ impl Player {
     pub fn initialize(&mut self) {
         let track = self.playlist.current().copied();
         self.add_event(Event::Player(Playback::TrackChanged(track)));
+        self.add_event(Event::Player(Playback::Toggled(self.is_playing)));
         if track.is_some() {
             self.add_event(Event::Player(Playback::ProgressUpdated {
                 elapsed_ms: self.elapsed_ms,
