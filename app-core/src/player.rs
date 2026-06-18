@@ -53,10 +53,12 @@ impl Player {
 
     fn play(&mut self) {
         self.is_playing = true;
+        self.add_event(Event::Player(Playback::Toggled(self.is_playing)));
     }
 
     fn pause(&mut self) {
         self.is_playing = false;
+        self.add_event(Event::Player(Playback::Toggled(self.is_playing)));
     }
 
     fn stop(&mut self) {
@@ -69,7 +71,6 @@ impl Player {
             true => self.pause(),
             false => self.play(),
         };
-        self.add_event(Event::Player(Playback::Toggled(self.is_playing)));
     }
 
     pub fn tick(&mut self, delta_ms: u32) {
