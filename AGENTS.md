@@ -62,8 +62,10 @@ music-player-firmware/
 │   └── config.toml                 # Workspace-level: [target.thumbv7em-none-eabihf] only
 │                                   # NO [build] target here — see app-firmware below
 │
-├── app-hal/                        # HAL traits + mock implementations
-│   └── src/lib.rs                  # AudioFileReader, AudioOutput traits; mock:: module
+├── app-hal/                        # HAL traits + host mock implementations ONLY
+│   └── src/
+│       ├── lib.rs                  # AudioFileReader, AudioOutput traits
+│       └── mock.rs                 # MockFileReader, MockAudioOutput (std only)
 │
 ├── app-core/                       # Pure business logic — no hardware dependencies
 │   └── src/
@@ -71,6 +73,9 @@ music-player-firmware/
 │       ├── player.rs             # Playback actor — emits events, owns state
 │       ├── player/
 │       │   └── tests.rs          # Player unit tests (submodule pattern)
+│       ├── decoder.rs            # Symphonia FLAC decode (platform-agnostic)
+│       ├── decoder/
+│       │   └── tests.rs          # Decode unit tests (submodule pattern)
 │       ├── playlist.rs           # Fixed-capacity track list
 │       ├── playlist/
 │       │   └── tests.rs          # Playlist unit tests (submodule pattern)
@@ -86,12 +91,13 @@ music-player-firmware/
 │   ├── .cargo/config.toml          # [build] target = "thumbv7em-none-eabihf" ONLY HERE
 │   └── src/
 │       ├── main.rs                 # Embassy entry point, task spawning
-│       ├── hal/
+│       ├── drivers/
 │       │   ├── sd_card.rs          # SdCardReader: impl AudioFileReader
 │       │   ├── audio_out.rs        # Ak4377Output: impl AudioOutput
 │       │   └── ak4377.rs           # AK4377 I2C register init sequence
 │       └── tasks/
-│           ├── decode_task.rs      # Symphonia decode loop
+│           ├── decode_task.rs      # Drives Decoder actor
+│           ├── player_task.rs      # Drives Player actor
 │           └── ui_task.rs          # Button/display handling
 │
 └── app-mock/                  # Desktop UI simulator — std, runs on host
@@ -106,8 +112,8 @@ music-player-firmware/
 
 ## Architecture Rules
 
-1. **Hardware code lives only in `app-firmware/src/hal/`**. No Embassy types, no STM32
-   peripheral types anywhere in `app-core` or `app-hal`.
+1. **Hardware code lives only in `app-firmware/src/drivers/` and `app-firmware/src/tasks/`.**
+   No Embassy types, no STM32 peripheral types anywhere in `app-core` or `app-hal`.
 
 2. **`app-core` and `app-hal` must compile with `cargo test` on the host** (std enabled).
    Never add `embassy-*`, `cortex-m`, or any `no_std`-only dep to these crates without
@@ -135,6 +141,10 @@ music-player-firmware/
    `src/<module>/tests.rs` and declare them with `#[cfg(test)] mod tests;`
    inside `src/<module>.rs`. This keeps source files readable while retaining
    `use super::*` access to private items.
+
+9. **HAL traits live in `app-hal`; hardware implementations live in `app-firmware`.**
+   `app-hal` must never contain Embassy types, STM32 peripherals, or board-specific code.
+   It only defines traits and provides `std`-based mock implementations for host testing.
 
 ---
 
@@ -201,27 +211,32 @@ Approximate runtime memory budget:
 
 ## HAL Traits (`app-hal`)
 
+`app-hal` defines platform-agnostic traits used by `app-core` and implemented by hardware drivers in `app-firmware`:
+
 ```rust
-// Storage abstraction — implemented by SdCardReader (firmware) and MockFileReader (tests)
+// Storage abstraction
 pub trait AudioFileReader {
-    fn open(&mut self, filename: &str)   -> Result<(), StorageError>;
-    fn read(&mut self, buf: &mut [u8])   -> Result<usize, StorageError>;
-    fn seek(&mut self, pos: u64)         -> Result<(), StorageError>;
-    fn file_len(&self)                   -> Result<u64, StorageError>;
+    fn open(&mut self, filename: &str)   -> Result<(), FileError>;
+    fn read(&mut self, buf: &mut [u8])   -> Result<usize, FileError>;
+    fn seek(&mut self, pos: u64)         -> Result<(), FileError>;
+    fn file_len(&self)                   -> Result<u64, FileError>;
 }
 
-// Audio output abstraction — implemented by Ak4377Output (firmware) and MockAudioOutput (tests)
+// Audio output abstraction
 pub trait AudioOutput {
-    fn write_samples(&mut self, samples: &[i16]) -> Result<(), AudioOutputError>;
+    fn write_samples(&mut self, samples: &[i16]) -> Result<(), OutputError>;
     fn sample_rate(&self) -> u32;
     fn channels(&self)    -> u16;
-    fn flush(&mut self)   -> Result<(), AudioOutputError>;
+    fn flush(&mut self)   -> Result<(), OutputError>;
 }
 ```
 
-Mock implementations live in `app-mock::mock-file-reader` and
-`app-mock::mock-audio-outpu`. `mock-audio-output` captures all written samples into a
-`Vec<i16>` for assertion in tests. It has a `simulate_overrun` flag for testing error paths.
+| Implementation | Location | Description |
+|---|---|---|
+| `SdCardReader` | `app-firmware/src/drivers/sd_card.rs` | SDMMC file I/O for embedded target |
+| `Ak4377Output` | `app-firmware/src/drivers/audio_out.rs` | SAI + AK4377 audio output |
+| `MockFileReader` | `app-hal/src/mock.rs` | `std::fs::File` wrapper for host tests |
+| `MockAudioOutput` | `app-hal/src/mock.rs` | Captures samples into `Vec<i16>` for assertions |
 
 ---
 
@@ -283,7 +298,8 @@ pub enum Event {
 
 | Actor | Owned by | Receives | Emits |
 |---|---|---|---|
-| **Player** | `player_task` | `Event::Player(Playback::*)` commands | `TrackChanged`, `Toggled`, `ProgressUpdated`, `Stopped` |
+| **Player** | `player_task` | `Event::Player(Playback::*)` commands, PCM consumed events | `TrackChanged`, `Toggled`, `ProgressUpdated`, `Stopped` |
+| **Decoder** | `decode_task` | File path / seek commands from Player | `DecodeError`, buffered PCM |
 | **Active Screen** | `ui_task` | `ButtonPress`, `Player` events | `Player` commands, `Ui(Refresh)`, `Ui(Change)` |
 | **ScreenManager** | `ui_task` | `Ui(Change)` | Routes events to active screen |
 
@@ -295,13 +311,27 @@ first draw without a special-case initial-sync path.
 
 ---
 
+## Audio Pipeline
+
+FLAC decoding is handled by a `Decoder` actor in `app-core`:
+
+```
+SD card bytes → AudioFileReader → Decoder (Symphonia) → AudioOutput → DAC
+```
+
+`Decoder` is platform-agnostic. It calls `AudioFileReader::read()` for input bytes and `AudioOutput::write_samples()` for output PCM. On the host, both sides are mocked. On the STM32, `SdCardReader` and `Ak4377Output` provide real I/O.
+
+The decoder runs in its own async task, filling a bounded PCM buffer. `Player` consumes samples from this buffer each `tick()`, advancing `elapsed_ms` based on actual sample consumption rather than a simulated timer.
+
+---
+
 ## Milestones
 
 - [x] **Milestone 1** Retained-mode GUI framework (`app-core` + `app-mock`) — widget structs (`Label`, `ProgressBar`, `PlayButton`, `List`), screen composition via `Default`, `app-mock` update/sync/draw loop with keyboard navigation
 - [x] **Milestone 2** Player state machine + playlist logic (`app-core`, host-tested) — actor model with event-driven state changes, auto-advance, next/prev
 - [x] **Milestone 3** Transport controls + progress bar UI (event-driven, auto-advance) — single-threaded event cascade in `app-mock` simulates Embassy tasks
-- [ ] **Milestone 4** FLAC decode via Symphonia (desktop end-to-end)
-- [ ] **Milestone 5** HAL traits + mocks (`app-hal`)
+- [ ] **Milestone 4** FLAC decode via Symphonia (desktop end-to-end) — `app-core/src/decoder.rs`, `app-hal` traits, host end-to-end test
+- [ ] **Milestone 5** HAL traits + mocks (`app-hal`) — `AudioFileReader`, `AudioOutput`, `MockFileReader`, `MockAudioOutput`
 - [ ] **Milestone 6** Hardware bringup (STM32 boot, LED blink, RTT logs)
 - [ ] **Milestone 7** AK4377 I2C init + SAI sine wave
 - [ ] **Milestone 8** SD card reads + raw PCM playback
