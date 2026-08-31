@@ -10,6 +10,7 @@ pub struct ScreenManager {
     main: MainScreen,
     settings: SettingsScreen,
     current_screen: ScreenName,
+    pub needs_refresh: bool,
 }
 
 impl Default for ScreenManager {
@@ -18,6 +19,7 @@ impl Default for ScreenManager {
             main: MainScreen::default(),
             settings: SettingsScreen::default(),
             current_screen: ScreenName::Main,
+            needs_refresh: true,
         }
     }
 }
