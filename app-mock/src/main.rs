@@ -10,18 +10,20 @@ use embedded_graphics_simulator::{
 };
 use heapless::Vec;
 
-use app_core::event::{Button, Event};
+use app_core::event::{self, Button, Event};
 use app_core::player::Player;
 use app_core::playlist::Playlist;
 use app_core::track::Track;
 use app_core::ui::display_config::{DISPLAY_HEIGHT, DISPLAY_WIDTH, PIXEL_SCALE, PIXEL_SPACING};
 use app_core::ui::screen_manager::ScreenManager;
 
-static EVENTS_CH: Channel<CriticalSectionRawMutex, Event, 8> = Channel::new();
+static EVENTS_CH: Channel<CriticalSectionRawMutex, Event, 100> = Channel::new();
+static COMMANDS_CH: Channel<CriticalSectionRawMutex, Event, 100> = Channel::new();
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
     spawner.spawn(player_task()).unwrap();
+    spawner.spawn(timer_task()).unwrap();
     spawner.spawn(ui_task()).unwrap();
 }
 
@@ -45,19 +47,25 @@ fn create_mock_player() -> Player {
 #[embassy_executor::task]
 async fn player_task() {
     let mut player = create_mock_player();
-    drain_to(player.event_queue(), &EVENTS_CH).await;
-
-    let mut ticker = Ticker::every(Duration::from_millis(33));
 
     loop {
-        ticker.next().await;
-
+        let event = COMMANDS_CH.receive().await;
+        player.handle_event(&event);
         while let Ok(event) = EVENTS_CH.try_receive() {
             player.handle_event(&event);
         }
-
-        player.tick(33);
         drain_to(player.event_queue(), &EVENTS_CH).await;
+    }
+}
+
+#[embassy_executor::task]
+async fn timer_task() {
+    let mut ticker = Ticker::every(Duration::from_millis(20));
+    loop {
+        ticker.next().await;
+        COMMANDS_CH
+            .send(Event::Player(app_core::event::Playback::Tick(20)))
+            .await;
     }
 }
 
@@ -81,12 +89,6 @@ async fn ui_task() {
     let mut screen_manager = ScreenManager::default();
 
     loop {
-        while let Ok(event) = EVENTS_CH.try_receive() {
-            screen_manager.handle_event(&event);
-        }
-
-        drain_to(screen_manager.event_queue(), &EVENTS_CH).await;
-
         if screen_manager.needs_refresh {
             screen_manager.draw(&mut display);
             window.update(&display);
@@ -105,11 +107,21 @@ async fn ui_task() {
             }
         }
 
+        while let Ok(event) = EVENTS_CH.try_receive() {
+            screen_manager.handle_event(&event);
+        }
+        for event in screen_manager.event_queue() {
+            match event {
+                e @ Event::Ui(_) => screen_manager.handle_event(&e),
+                other => COMMANDS_CH.send(other).await,
+            }
+        }
+
         Timer::after_millis(10).await;
     }
 }
 
-async fn drain_to(event_queue: Vec<Event, 8>, ch: &Channel<CriticalSectionRawMutex, Event, 8>) {
+async fn drain_to(event_queue: Vec<Event, 8>, ch: &Channel<CriticalSectionRawMutex, Event, 100>) {
     for event in event_queue {
         ch.send(event).await;
     }
