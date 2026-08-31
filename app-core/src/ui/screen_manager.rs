@@ -7,8 +7,8 @@ use crate::ui::screens::main_screen::MainScreen;
 use crate::ui::screens::settings_screen::SettingsScreen;
 
 pub struct ScreenManager {
-    pub main: MainScreen,
-    pub settings: SettingsScreen,
+    main: MainScreen,
+    settings: SettingsScreen,
     current_screen: ScreenName,
 }
 
