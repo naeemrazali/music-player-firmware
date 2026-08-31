@@ -17,12 +17,9 @@ pub struct SettingsScreen {
 
 impl SettingsScreen {
     pub fn handle_event(&mut self, event: &Event) {
-        match event {
-            Event::ButtonPress(Button::Menu) => {
-                self.add_event(Event::Ui(Screen::Change(ScreenName::Main)));
-                self.add_event(Event::Ui(Screen::Refresh));
-            }
-            _ => (),
+        if let Event::ButtonPress(Button::Menu) = event {
+            self.add_event(Event::Ui(Screen::Change(ScreenName::Main)));
+            self.add_event(Event::Ui(Screen::Refresh));
         }
     }
 

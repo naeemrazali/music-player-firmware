@@ -24,12 +24,13 @@ impl Default for ScreenManager {
 
 impl ScreenManager {
     pub fn handle_event(&mut self, event: &Event) {
-        match event {
-            Event::Ui(Screen::Change(screen)) => self.current_screen = *screen,
-            _ => match self.current_screen {
-                ScreenName::Main => self.main.handle_event(event),
-                ScreenName::Settings => self.settings.handle_event(event),
-            },
+        if let Event::Ui(Screen::Change(screen)) = event {
+            self.current_screen = *screen;
+            return;
+        }
+        match self.current_screen {
+            ScreenName::Main => self.main.handle_event(event),
+            ScreenName::Settings => self.settings.handle_event(event),
         }
     }
 
