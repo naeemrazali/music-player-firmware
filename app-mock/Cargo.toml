@@ -12,7 +12,9 @@ embassy-executor = { version = "0.5", features = [
   "arch-std",
   "executor-thread",
   "integrated-timers",
+  "task-arena-size-131072",
 ] }
 embassy-time = { version = "0.3", features = ["std"] }
 embassy-sync = "0.5"
 critical-section = { version = "1", features = ["std"] }
+heapless = "0.8"

@@ -41,6 +41,7 @@ dependencies = [
  "embassy-time",
  "embedded-graphics",
  "embedded-graphics-simulator",
+ "heapless",
 ]
 
 [[package]]

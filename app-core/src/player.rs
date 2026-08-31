@@ -10,12 +10,14 @@ pub struct Player {
 
 impl Player {
     pub fn new(playlist: Playlist) -> Self {
-        Self {
+        let mut player = Self {
             is_playing: true,
             elapsed_ms: 0,
             playlist,
             events: heapless::Vec::new(),
-        }
+        };
+        player.initialize();
+        player
     }
 
     pub fn handle_event(&mut self, event: &Event) {
