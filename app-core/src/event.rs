@@ -22,6 +22,7 @@ pub enum Playback {
         elapsed_ms: u32,
         percent_elapsed: u32,
     },
+    Tick(u32),
 }
 
 pub enum Screen {
