@@ -29,6 +29,9 @@ impl ScreenManager {
         if let Event::Ui(Screen::Change(screen)) = event {
             self.current_screen = *screen;
             return;
+        } else if let Event::Ui(Screen::Refresh) = event {
+            self.needs_refresh = true;
+            return;
         }
         match self.current_screen {
             ScreenName::Main => self.main.handle_event(event),
