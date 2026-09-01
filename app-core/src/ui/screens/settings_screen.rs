@@ -16,13 +16,13 @@ pub struct SettingsScreen {
 }
 
 impl SettingsScreen {
-    pub fn handle_event(&mut self, event: &Event) -> Option<Event> {
+    pub fn handle_event(&mut self, event: &Event) {
         if let Event::ButtonPress(Button::Menu) = event {
             self.add_event(Event::Ui(Screen::Change(ScreenName::Main)));
             self.add_event(Event::Ui(Screen::Refresh));
-            return None;
+            return;
         }
-        Some(*event)
+        self.add_event(*event);
     }
 
     pub fn event_queue(&mut self) -> heapless::Vec<Event, 8> {

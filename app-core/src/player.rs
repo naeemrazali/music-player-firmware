@@ -20,12 +20,7 @@ impl Player {
         player
     }
 
-    pub fn handle_event_queue(&mut self, event_queue: &mut heapless::Vec<Event, 8>) {
-        event_queue.retain(|event| self.handle_event(event).is_some());
-    }
-
-    fn handle_event(&mut self, event: &Event) -> Option<Event> {
-        let mut ret = None;
+    pub fn handle_event(&mut self, event: &Event) {
         match event {
             Event::Player(Playback::Seek(percent)) => self.seek_to(*percent),
             Event::Player(Playback::NextTrack) => self.next_track(),
@@ -33,9 +28,8 @@ impl Player {
             Event::Player(Playback::Stop) => self.stop(),
             Event::Player(Playback::Toggle) => self.toggle_playback(),
             Event::Player(Playback::Tick(time)) => self.tick(*time),
-            _ => ret = Some(*event),
+            _ => self.add_event(*event),
         }
-        ret
     }
 
     fn initialize(&mut self) {

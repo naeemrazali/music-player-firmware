@@ -25,24 +25,16 @@ impl Default for ScreenManager {
 }
 
 impl ScreenManager {
-    pub fn handle_event_queue(&mut self, event_queue: &mut heapless::Vec<Event, 8>) {
-        event_queue.retain(|event| self.handle_event(event).is_some());
-    }
-
-    fn handle_event(&mut self, event: &Event) -> Option<Event> {
-        let mut ret = None;
+    pub fn handle_event(&mut self, event: &Event) {
         if let Event::Ui(Screen::Change(screen)) = event {
             self.current_screen = *screen;
-            return ret;
         } else if let Event::Ui(Screen::Refresh) = event {
             self.needs_refresh = true;
-            return ret;
         }
         match self.current_screen {
-            ScreenName::Main => ret = self.main.handle_event(event),
-            ScreenName::Settings => ret = self.settings.handle_event(event),
+            ScreenName::Main => self.main.handle_event(event),
+            ScreenName::Settings => self.settings.handle_event(event),
         }
-        ret
     }
 
     pub fn event_queue(&mut self) -> heapless::Vec<Event, 8> {

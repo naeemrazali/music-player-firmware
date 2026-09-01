@@ -20,8 +20,7 @@ pub struct MainScreen {
 }
 
 impl MainScreen {
-    pub fn handle_event(&mut self, event: &Event) -> Option<Event> {
-        let mut ret = None;
+    pub fn handle_event(&mut self, event: &Event) {
         match event {
             Event::ButtonPress(Button::Play) => {
                 self.add_event(Event::Player(Playback::Toggle));
@@ -54,9 +53,8 @@ impl MainScreen {
                 self.update_progress_bar(*elapsed_ms, *percent_elapsed);
                 self.add_event(Event::Ui(Screen::Refresh));
             }
-            _ => ret = Some(*event),
+            _ => self.add_event(*event),
         }
-        ret
     }
 
     pub fn event_queue(&mut self) -> heapless::Vec<Event, 8> {
