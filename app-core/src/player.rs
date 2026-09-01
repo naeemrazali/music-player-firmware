@@ -32,7 +32,7 @@ impl Player {
         }
     }
 
-    pub fn initialize(&mut self) {
+    fn initialize(&mut self) {
         let track = self.playlist.current().copied();
         self.add_event(Event::Player(Playback::TrackChanged(track)));
         self.add_event(Event::Player(Playback::Toggled(self.is_playing)));
