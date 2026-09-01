@@ -10,7 +10,6 @@ pub struct ScreenManager {
     main: MainScreen,
     settings: SettingsScreen,
     current_screen: ScreenName,
-    pub needs_refresh: bool,
 }
 
 impl Default for ScreenManager {
@@ -19,7 +18,6 @@ impl Default for ScreenManager {
             main: MainScreen::default(),
             settings: SettingsScreen::default(),
             current_screen: ScreenName::Main,
-            needs_refresh: true,
         }
     }
 }
@@ -28,8 +26,6 @@ impl ScreenManager {
     pub fn handle_event(&mut self, event: &Event) {
         if let Event::Ui(Screen::Change(screen)) = event {
             self.current_screen = *screen;
-        } else if let Event::Ui(Screen::Refresh) = event {
-            self.needs_refresh = true;
         }
         match self.current_screen {
             ScreenName::Main => self.main.handle_event(event),
