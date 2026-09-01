@@ -10,7 +10,7 @@ use embedded_graphics_simulator::{
 };
 use heapless::Vec;
 
-use app_core::event::{self, Button, Event};
+use app_core::event::{Button, Event};
 use app_core::player::Player;
 use app_core::playlist::Playlist;
 use app_core::track::Track;
