@@ -1,6 +1,6 @@
 use crate::{track::Track, ui::screen_names::ScreenName};
 
-#[derive(Copy, Clone)]
+#[derive(Clone, Copy)]
 pub enum Button {
     Play,
     Menu,
@@ -9,6 +9,7 @@ pub enum Button {
     Seek(u32),
 }
 
+#[derive(Clone, Copy)]
 pub enum Playback {
     Toggle,
     Stopped,
@@ -25,11 +26,13 @@ pub enum Playback {
     Tick(u32),
 }
 
+#[derive(Clone, Copy)]
 pub enum Screen {
     Refresh,
     Change(ScreenName),
 }
 
+#[derive(Clone, Copy)]
 pub enum Event {
     ButtonPress(Button),
     Player(Playback),
