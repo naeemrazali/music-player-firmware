@@ -29,7 +29,7 @@ impl ScreenManager {
         event_queue.retain(|event| self.handle_event(event).is_some());
     }
 
-    pub fn handle_event(&mut self, event: &Event) -> Option<Event> {
+    fn handle_event(&mut self, event: &Event) -> Option<Event> {
         let mut ret = None;
         if let Event::Ui(Screen::Change(screen)) = event {
             self.current_screen = *screen;
