@@ -24,7 +24,7 @@ impl Player {
         event_queue.retain(|event| self.handle_event(event).is_some());
     }
 
-    pub fn handle_event(&mut self, event: &Event) -> Option<Event> {
+    fn handle_event(&mut self, event: &Event) -> Option<Event> {
         let mut ret = None;
         match event {
             Event::Player(Playback::Seek(percent)) => self.seek_to(*percent),
