@@ -20,9 +20,7 @@ impl SettingsScreen {
         if let Event::ButtonPress(Button::Menu) = event {
             self.add_event(Event::Ui(Screen::Change(ScreenName::Main)));
             self.add_event(Event::Ui(Screen::Refresh));
-            return;
         }
-        self.add_event(*event);
     }
 
     pub fn event_queue(&mut self) -> heapless::Vec<Event, 8> {

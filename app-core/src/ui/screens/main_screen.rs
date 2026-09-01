@@ -53,7 +53,7 @@ impl MainScreen {
                 self.update_progress_bar(*elapsed_ms, *percent_elapsed);
                 self.add_event(Event::Ui(Screen::Refresh));
             }
-            _ => self.add_event(*event),
+            _ => (),
         }
     }
 

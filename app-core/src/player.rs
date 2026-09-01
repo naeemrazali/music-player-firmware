@@ -28,7 +28,7 @@ impl Player {
             Event::Player(Playback::Stop) => self.stop(),
             Event::Player(Playback::Toggle) => self.toggle_playback(),
             Event::Player(Playback::Tick(time)) => self.tick(*time),
-            _ => self.add_event(*event),
+            _ => (),
         }
     }
 
