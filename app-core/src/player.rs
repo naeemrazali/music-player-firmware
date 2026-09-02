@@ -18,7 +18,7 @@ impl Player {
         }
     }
 
-    pub fn initial_state(&mut self) {
+    pub fn initial_state(&mut self) -> heapless::Vec<Event, 8> {
         let track = self.playlist.current().copied();
         self.add_event(Event::Playback(State::TrackChanged(track)));
         self.add_event(Event::Playback(State::Toggled(self.is_playing)));
@@ -28,6 +28,7 @@ impl Player {
                 percent_elapsed: self.percent_elapsed(),
             }));
         }
+        self.push_events()
     }
 
     pub fn handle_event(&mut self, event: &Event) -> heapless::Vec<Event, 8> {
