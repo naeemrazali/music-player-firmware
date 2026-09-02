@@ -3,7 +3,7 @@ use embedded_graphics::pixelcolor::Gray8;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::Rectangle;
 
-use crate::event::{Button, Event, Playback, Screen};
+use crate::event::{Button, Command, Event, Screen, State};
 use crate::track::Track;
 use crate::ui;
 use crate::ui::screen_names::ScreenName;
@@ -23,30 +23,30 @@ impl MainScreen {
     pub fn handle_event(&mut self, event: &Event) {
         match event {
             Event::ButtonPress(Button::Play) => {
-                self.add_event(Event::Player(Playback::Toggle));
+                self.add_event(Event::Player(Command::Toggle));
             }
             Event::ButtonPress(Button::Menu) => {
                 self.add_event(Event::Ui(Screen::Change(ScreenName::Settings)));
                 self.add_event(Event::Ui(Screen::Refresh));
             }
             Event::ButtonPress(Button::Next) => {
-                self.add_event(Event::Player(Playback::NextTrack));
+                self.add_event(Event::Player(Command::NextTrack));
             }
             Event::ButtonPress(Button::Prev) => {
-                self.add_event(Event::Player(Playback::PreviousTrack));
+                self.add_event(Event::Player(Command::PreviousTrack));
             }
             Event::ButtonPress(Button::Seek(percent)) => {
-                self.add_event(Event::Player(Playback::Seek(*percent)));
+                self.add_event(Event::Player(Command::Seek(*percent)));
             }
-            Event::Player(Playback::TrackChanged(track)) => {
+            Event::Playback(State::TrackChanged(track)) => {
                 self.sync_new_track(track);
                 self.add_event(Event::Ui(Screen::Refresh));
             }
-            Event::Player(Playback::Toggled(is_playing)) => {
+            Event::Playback(State::Toggled(is_playing)) => {
                 self.update_play_button(*is_playing);
                 self.add_event(Event::Ui(Screen::Refresh));
             }
-            Event::Player(Playback::ProgressUpdated {
+            Event::Playback(State::ProgressUpdated {
                 elapsed_ms,
                 percent_elapsed,
             }) => {
