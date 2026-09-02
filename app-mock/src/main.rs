@@ -1,6 +1,7 @@
 use embassy_executor::Spawner;
+use embassy_futures::select::{Either, select};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use embassy_sync::channel::Channel;
+use embassy_sync::pubsub::{PubSubChannel, WaitResult};
 use embassy_time::{Duration, Ticker, Timer};
 use embedded_graphics::pixelcolor::Gray8;
 use embedded_graphics::prelude::*;
@@ -8,23 +9,20 @@ use embedded_graphics_simulator::sdl2::Keycode;
 use embedded_graphics_simulator::{
     OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
 };
-use heapless::Vec;
 
-use app_core::event::{Button, Event};
+use app_core::event::{Button, Command, Event, Screen};
 use app_core::player::Player;
 use app_core::playlist::Playlist;
 use app_core::track::Track;
 use app_core::ui::display_config::{DISPLAY_HEIGHT, DISPLAY_WIDTH, PIXEL_SCALE, PIXEL_SPACING};
 use app_core::ui::screen_manager::ScreenManager;
 
-static EVENTS_CH: Channel<CriticalSectionRawMutex, Event, 100> = Channel::new();
-static COMMANDS_CH: Channel<CriticalSectionRawMutex, Event, 100> = Channel::new();
+static EVENTS: PubSubChannel<CriticalSectionRawMutex, Event, 64, 2, 2> = PubSubChannel::new();
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
-    spawner.spawn(player_task()).unwrap();
-    spawner.spawn(timer_task()).unwrap();
     spawner.spawn(ui_task()).unwrap();
+    spawner.spawn(player_task()).unwrap();
 }
 
 fn create_mock_player() -> Player {
@@ -45,31 +43,6 @@ fn create_mock_player() -> Player {
 }
 
 #[embassy_executor::task]
-async fn player_task() {
-    let mut player = create_mock_player();
-
-    loop {
-        let event = COMMANDS_CH.receive().await;
-        player.handle_event(&event);
-        while let Ok(event) = EVENTS_CH.try_receive() {
-            player.handle_event(&event);
-        }
-        drain_to(player.event_queue(), &EVENTS_CH).await;
-    }
-}
-
-#[embassy_executor::task]
-async fn timer_task() {
-    let mut ticker = Ticker::every(Duration::from_millis(20));
-    loop {
-        ticker.next().await;
-        COMMANDS_CH
-            .send(Event::Player(app_core::event::Playback::Tick(20)))
-            .await;
-    }
-}
-
-#[embassy_executor::task]
 async fn ui_task() {
     let mut display: SimulatorDisplay<Gray8> =
         SimulatorDisplay::new(Size::new(DISPLAY_WIDTH, DISPLAY_HEIGHT));
@@ -86,44 +59,73 @@ async fn ui_task() {
         &output_settings,
     );
 
+    let mut subscriber = EVENTS.subscriber().unwrap();
+    let publisher = EVENTS.publisher().unwrap();
     let mut screen_manager = ScreenManager::default();
+    screen_manager.draw(&mut display);
+    window.update(&display);
 
     loop {
-        if screen_manager.needs_refresh {
-            screen_manager.draw(&mut display);
-            window.update(&display);
-            screen_manager.needs_refresh = false;
-        }
+        let timeout = Timer::after(Duration::from_millis(33));
 
-        for event in window.events() {
-            match event {
-                SimulatorEvent::Quit => std::process::exit(0),
-                SimulatorEvent::KeyDown { keycode, .. } => {
-                    if let Some(e) = map_key(&keycode) {
-                        screen_manager.handle_event(&e);
+        match select(subscriber.next_message(), timeout).await {
+            Either::First(WaitResult::Message(Event::Playback(state))) => {
+                for event in screen_manager.handle_event(&Event::Playback(state)) {
+                    publisher.publish(event).await;
+                }
+            }
+            Either::First(WaitResult::Message(Event::Ui(Screen::Change(screen)))) => {
+                for event in screen_manager.handle_event(&Event::Ui(Screen::Change(screen))) {
+                    publisher.publish(event).await;
+                }
+            }
+            Either::First(WaitResult::Message(Event::Ui(Screen::Refresh))) => {
+                screen_manager.draw(&mut display);
+                window.update(&display);
+            }
+            Either::First(_) => {}
+            Either::Second(_) => {
+                for event in window.events() {
+                    match event {
+                        SimulatorEvent::Quit => std::process::exit(0),
+                        SimulatorEvent::KeyDown { keycode, .. } => {
+                            if let Some(button_press) = map_key(&keycode) {
+                                for event in screen_manager.handle_event(&button_press) {
+                                    publisher.publish(event).await;
+                                }
+                            }
+                        }
+                        _ => {}
                     }
                 }
-                _ => {}
             }
         }
-
-        while let Ok(event) = EVENTS_CH.try_receive() {
-            screen_manager.handle_event(&event);
-        }
-        for event in screen_manager.event_queue() {
-            match event {
-                e @ Event::Ui(_) => screen_manager.handle_event(&e),
-                other => COMMANDS_CH.send(other).await,
-            }
-        }
-
-        Timer::after_millis(10).await;
     }
 }
 
-async fn drain_to(event_queue: Vec<Event, 8>, ch: &Channel<CriticalSectionRawMutex, Event, 100>) {
-    for event in event_queue {
-        ch.send(event).await;
+#[embassy_executor::task]
+async fn player_task() {
+    let mut player = create_mock_player();
+    let mut subscriber = EVENTS.subscriber().unwrap();
+    let publisher = EVENTS.publisher().unwrap();
+    let mut ticker = Ticker::every(Duration::from_millis(100));
+
+    loop {
+        match select(subscriber.next_message(), ticker.next()).await {
+            Either::First(WaitResult::Message(Event::Player(cmd))) => {
+                for event in player.handle_event(&Event::Player(cmd)) {
+                    publisher.publish(event).await;
+                }
+            }
+            Either::First(_) => {}
+
+            // 100ms elapsed → feed ourselves a Tick command, same door
+            Either::Second(_) => {
+                for event in player.handle_event(&Event::Player(Command::Tick(100))) {
+                    publisher.publish(event).await;
+                }
+            }
+        }
     }
 }
 

@@ -16,5 +16,6 @@ embassy-executor = { version = "0.5", features = [
 ] }
 embassy-time = { version = "0.3", features = ["std"] }
 embassy-sync = "0.5"
+embassy-futures = "0.1"
 critical-section = { version = "1", features = ["std"] }
 heapless = "0.8"
