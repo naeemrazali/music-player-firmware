@@ -12,7 +12,6 @@ pub enum Button {
 #[derive(Clone, Copy)]
 pub enum Command {
     Toggle,
-    Stopped,
     Seek(u32),
     NextTrack,
     PreviousTrack,
@@ -28,6 +27,7 @@ pub enum State {
         elapsed_ms: u32,
         percent_elapsed: u32,
     },
+    Stopped,
 }
 
 #[derive(Clone, Copy)]
