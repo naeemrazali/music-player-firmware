@@ -16,7 +16,7 @@ impl Player {
             playlist,
             events: heapless::Vec::new(),
         };
-        player.next_track();
+        player.current_track();
         player.play();
         player.seek_to(0);
         player
@@ -105,6 +105,11 @@ impl Player {
         if elapsed_ms == total && total > 0 {
             self.next_track();
         }
+    }
+
+    fn current_track(&mut self) {
+        let track = self.playlist.current().copied();
+        self.add_event(Event::Playback(State::TrackChanged(track)));
     }
 
     fn next_track(&mut self) {
