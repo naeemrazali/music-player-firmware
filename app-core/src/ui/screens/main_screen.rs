@@ -20,7 +20,7 @@ pub struct MainScreen {
 }
 
 impl MainScreen {
-    pub fn handle_event(&mut self, event: &Event) {
+    pub fn handle_event(&mut self, event: &Event) -> heapless::Vec<Event, 8> {
         match event {
             Event::ButtonPress(Button::Play) => {
                 self.add_event(Event::Player(Command::Toggle));
@@ -55,12 +55,13 @@ impl MainScreen {
             }
             _ => (),
         }
+        self.push_events()
     }
 
-    pub fn event_queue(&mut self) -> heapless::Vec<Event, 8> {
-        let mut queue = heapless::Vec::new();
-        core::mem::swap(&mut self.events, &mut queue);
-        queue
+    pub fn push_events(&mut self) -> heapless::Vec<Event, 8> {
+        let mut events = heapless::Vec::new();
+        core::mem::swap(&mut self.events, &mut events);
+        events
     }
 
     fn add_event(&mut self, event: Event) {

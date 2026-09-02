@@ -23,21 +23,14 @@ impl Default for ScreenManager {
 }
 
 impl ScreenManager {
-    pub fn handle_event(&mut self, event: &Event) {
+    pub fn handle_event(&mut self, event: &Event) -> heapless::Vec<Event, 8> {
         if let Event::Ui(Screen::Change(screen)) = event {
             self.current_screen = *screen;
-            return;
+            return heapless::Vec::new();
         }
         match self.current_screen {
             ScreenName::Main => self.main.handle_event(event),
             ScreenName::Settings => self.settings.handle_event(event),
-        }
-    }
-
-    pub fn event_queue(&mut self) -> heapless::Vec<Event, 8> {
-        match self.current_screen {
-            ScreenName::Main => self.main.event_queue(),
-            ScreenName::Settings => self.settings.event_queue(),
         }
     }
 
