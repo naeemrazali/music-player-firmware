@@ -10,25 +10,16 @@ pub struct Player {
 
 impl Player {
     pub fn new(playlist: Playlist) -> Self {
-        Self {
+        let mut player = Self {
             is_playing: true,
             elapsed_ms: 0,
             playlist,
             events: heapless::Vec::new(),
-        }
-    }
-
-    pub fn initial_state(&mut self) -> heapless::Vec<Event, 8> {
-        let track = self.playlist.current().copied();
-        self.add_event(Event::Playback(State::TrackChanged(track)));
-        self.add_event(Event::Playback(State::Toggled(self.is_playing)));
-        if track.is_some() {
-            self.add_event(Event::Playback(State::ProgressUpdated {
-                elapsed_ms: self.elapsed_ms,
-                percent_elapsed: self.percent_elapsed(),
-            }));
-        }
-        self.push_events()
+        };
+        player.next_track();
+        player.play();
+        player.seek_to(0);
+        player
     }
 
     pub fn handle_event(&mut self, event: &Event) -> heapless::Vec<Event, 8> {
