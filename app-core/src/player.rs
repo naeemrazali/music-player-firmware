@@ -20,18 +20,6 @@ impl Player {
         player
     }
 
-    pub fn handle_event(&mut self, event: &Event) {
-        match event {
-            Event::Player(Command::Seek(percent)) => self.seek_to(*percent),
-            Event::Player(Command::NextTrack) => self.next_track(),
-            Event::Player(Command::PreviousTrack) => self.prev_track(),
-            Event::Player(Command::Stop) => self.stop(),
-            Event::Player(Command::Toggle) => self.toggle_playback(),
-            Event::Player(Command::Tick(time)) => self.tick(*time),
-            _ => (),
-        }
-    }
-
     fn initialize(&mut self) {
         let track = self.playlist.current().copied();
         self.add_event(Event::Playback(State::TrackChanged(track)));
@@ -44,10 +32,23 @@ impl Player {
         }
     }
 
-    pub fn event_queue(&mut self) -> heapless::Vec<Event, 8> {
-        let mut queue = heapless::Vec::new();
-        core::mem::swap(&mut self.events, &mut queue);
-        queue
+    pub fn handle_event(&mut self, event: &Event) -> heapless::Vec<Event, 8> {
+        match event {
+            Event::Player(Command::Seek(percent)) => self.seek_to(*percent),
+            Event::Player(Command::NextTrack) => self.next_track(),
+            Event::Player(Command::PreviousTrack) => self.prev_track(),
+            Event::Player(Command::Stop) => self.stop(),
+            Event::Player(Command::Toggle) => self.toggle_playback(),
+            Event::Player(Command::Tick(time)) => self.tick(*time),
+            _ => (),
+        }
+        self.push_events()
+    }
+
+    pub fn push_events(&mut self) -> heapless::Vec<Event, 8> {
+        let mut events = heapless::Vec::new();
+        core::mem::swap(&mut self.events, &mut events);
+        events
     }
 
     fn add_event(&mut self, event: Event) {
