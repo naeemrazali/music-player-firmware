@@ -10,20 +10,24 @@ pub enum Button {
 }
 
 #[derive(Clone, Copy)]
-pub enum Playback {
+pub enum Command {
     Toggle,
     Stopped,
     Seek(u32),
     NextTrack,
     PreviousTrack,
     Stop,
+    Tick(u32),
+}
+
+#[derive(Clone, Copy)]
+pub enum State {
     TrackChanged(Option<Track>),
     Toggled(bool),
     ProgressUpdated {
         elapsed_ms: u32,
         percent_elapsed: u32,
     },
-    Tick(u32),
 }
 
 #[derive(Clone, Copy)]
@@ -35,6 +39,7 @@ pub enum Screen {
 #[derive(Clone, Copy)]
 pub enum Event {
     ButtonPress(Button),
-    Player(Playback),
+    Player(Command),
+    Playback(State),
     Ui(Screen),
 }
