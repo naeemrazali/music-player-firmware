@@ -10,17 +10,15 @@ pub struct Player {
 
 impl Player {
     pub fn new(playlist: Playlist) -> Self {
-        let mut player = Self {
+        Self {
             is_playing: true,
             elapsed_ms: 0,
             playlist,
             events: heapless::Vec::new(),
-        };
-        player.initialize();
-        player
+        }
     }
 
-    fn initialize(&mut self) {
+    pub fn initial_state(&mut self) {
         let track = self.playlist.current().copied();
         self.add_event(Event::Playback(State::TrackChanged(track)));
         self.add_event(Event::Playback(State::Toggled(self.is_playing)));
