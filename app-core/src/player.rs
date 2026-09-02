@@ -1,4 +1,4 @@
-use crate::event::{Event, Playback};
+use crate::event::{Command, Event, State};
 use crate::playlist::Playlist;
 
 pub struct Player {
@@ -22,22 +22,22 @@ impl Player {
 
     pub fn handle_event(&mut self, event: &Event) {
         match event {
-            Event::Player(Playback::Seek(percent)) => self.seek_to(*percent),
-            Event::Player(Playback::NextTrack) => self.next_track(),
-            Event::Player(Playback::PreviousTrack) => self.prev_track(),
-            Event::Player(Playback::Stop) => self.stop(),
-            Event::Player(Playback::Toggle) => self.toggle_playback(),
-            Event::Player(Playback::Tick(time)) => self.tick(*time),
+            Event::Player(Command::Seek(percent)) => self.seek_to(*percent),
+            Event::Player(Command::NextTrack) => self.next_track(),
+            Event::Player(Command::PreviousTrack) => self.prev_track(),
+            Event::Player(Command::Stop) => self.stop(),
+            Event::Player(Command::Toggle) => self.toggle_playback(),
+            Event::Player(Command::Tick(time)) => self.tick(*time),
             _ => (),
         }
     }
 
     fn initialize(&mut self) {
         let track = self.playlist.current().copied();
-        self.add_event(Event::Player(Playback::TrackChanged(track)));
-        self.add_event(Event::Player(Playback::Toggled(self.is_playing)));
+        self.add_event(Event::Playback(State::TrackChanged(track)));
+        self.add_event(Event::Playback(State::Toggled(self.is_playing)));
         if track.is_some() {
-            self.add_event(Event::Player(Playback::ProgressUpdated {
+            self.add_event(Event::Playback(State::ProgressUpdated {
                 elapsed_ms: self.elapsed_ms,
                 percent_elapsed: self.percent_elapsed(),
             }));
@@ -56,17 +56,17 @@ impl Player {
 
     fn play(&mut self) {
         self.is_playing = true;
-        self.add_event(Event::Player(Playback::Toggled(self.is_playing)));
+        self.add_event(Event::Playback(State::Toggled(self.is_playing)));
     }
 
     fn pause(&mut self) {
         self.is_playing = false;
-        self.add_event(Event::Player(Playback::Toggled(self.is_playing)));
+        self.add_event(Event::Playback(State::Toggled(self.is_playing)));
     }
 
     fn stop(&mut self) {
         self.pause();
-        self.add_event(Event::Player(Playback::Stopped));
+        self.add_event(Event::Playback(State::Stopped));
     }
 
     fn toggle_playback(&mut self) {
@@ -80,7 +80,7 @@ impl Player {
         if self.is_playing {
             let total = self.total_ms();
             self.elapsed_ms = self.elapsed_ms.saturating_add(delta_ms).min(total);
-            self.add_event(Event::Player(Playback::ProgressUpdated {
+            self.add_event(Event::Playback(State::ProgressUpdated {
                 elapsed_ms: self.elapsed_ms,
                 percent_elapsed: self.percent_elapsed(),
             }));
@@ -107,7 +107,7 @@ impl Player {
         let elapsed_ms = ((percent * total) / 100).min(total);
 
         self.elapsed_ms = elapsed_ms;
-        self.add_event(Event::Player(Playback::ProgressUpdated {
+        self.add_event(Event::Playback(State::ProgressUpdated {
             elapsed_ms,
             percent_elapsed: percent,
         }));
@@ -121,7 +121,7 @@ impl Player {
         match track {
             Some(_) => {
                 self.elapsed_ms = 0;
-                self.add_event(Event::Player(Playback::TrackChanged(track)));
+                self.add_event(Event::Playback(State::TrackChanged(track)));
             }
             None => {
                 self.stop();
@@ -134,7 +134,7 @@ impl Player {
         match track {
             Some(_) => {
                 self.elapsed_ms = 0;
-                self.add_event(Event::Player(Playback::TrackChanged(track)));
+                self.add_event(Event::Playback(State::TrackChanged(track)));
             }
             None => {
                 self.stop();
