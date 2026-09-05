@@ -1,3 +1,4 @@
+mod mocks;
 mod tasks;
 
 use embassy_executor::Spawner;

@@ -1,13 +1,3 @@
-use app_core::{
-    event::{Button, Command, Event, Screen},
-    player::Player,
-    playlist::Playlist,
-    track::Track,
-    ui::{
-        display_config::{DISPLAY_HEIGHT, DISPLAY_WIDTH, PIXEL_SCALE, PIXEL_SPACING},
-        screen_manager::ScreenManager,
-    },
-};
 use embassy_futures::select::{Either, select};
 use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex,
@@ -19,24 +9,16 @@ use embedded_graphics_simulator::{
     OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window, sdl2::Keycode,
 };
 
-pub type EventChannel = PubSubChannel<CriticalSectionRawMutex, Event, 64, 2, 2>;
+use crate::mocks::mock_player;
+use app_core::{
+    event::{Button, Command, Event, Screen},
+    ui::{
+        display_config::{DISPLAY_HEIGHT, DISPLAY_WIDTH, PIXEL_SCALE, PIXEL_SPACING},
+        screen_manager::ScreenManager,
+    },
+};
 
-fn create_mock_player() -> Player {
-    let mut playlist = Playlist::new();
-    let _ = playlist.add(Track {
-        title: "Clair de Lune",
-        artist: "Claude Debussy",
-        duration_ms: 354000,
-        file_path: "/music/flac/clair_de_lune.flac",
-    });
-    let _ = playlist.add(Track {
-        title: "Gymnopédie No.1",
-        artist: "Erik Satie",
-        duration_ms: 210000,
-        file_path: "/music/flac/gymnopedie_no1.flac",
-    });
-    Player::new(playlist)
-}
+pub type EventChannel = PubSubChannel<CriticalSectionRawMutex, Event, 64, 2, 2>;
 
 #[embassy_executor::task]
 pub async fn ui_task(events: &'static EventChannel) {
@@ -101,7 +83,7 @@ pub async fn ui_task(events: &'static EventChannel) {
 
 #[embassy_executor::task]
 pub async fn player_task(events: &'static EventChannel) {
-    let mut player = create_mock_player();
+    let mut player = mock_player::new();
     let mut subscriber = events.subscriber().unwrap();
     let publisher = events.publisher().unwrap();
     let mut ticker = Ticker::every(Duration::from_millis(100));
