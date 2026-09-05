@@ -4,18 +4,15 @@ use embassy_sync::{
     pubsub::{PubSubChannel, WaitResult},
 };
 use embassy_time::{Duration, Ticker, Timer};
-use embedded_graphics_simulator::{OutputSettingsBuilder, SimulatorEvent, Window, sdl2::Keycode};
+use embedded_graphics_simulator::{SimulatorEvent, sdl2::Keycode};
 
 use crate::mocks::{
     mock_display::{self, MockSimulatorDisplay},
-    mock_player,
+    mock_player, mock_window,
 };
 use app_core::{
     event::{Button, Command, Event, Screen},
-    ui::{
-        display_config::{DISPLAY_HEIGHT, DISPLAY_WIDTH, PIXEL_SCALE, PIXEL_SPACING},
-        screen_manager::ScreenManager,
-    },
+    ui::screen_manager::ScreenManager,
 };
 
 pub type EventChannel = PubSubChannel<CriticalSectionRawMutex, Event, 64, 2, 2>;
@@ -23,17 +20,8 @@ pub type EventChannel = PubSubChannel<CriticalSectionRawMutex, Event, 64, 2, 2>;
 #[embassy_executor::task]
 pub async fn ui_task(events: &'static EventChannel) {
     let mut display: MockSimulatorDisplay = mock_display::new();
-    let output_settings = OutputSettingsBuilder::new()
-        .scale(PIXEL_SCALE)
-        .pixel_spacing(PIXEL_SPACING)
-        .build();
 
-    let mut window = Window::new(
-        &format!(
-            "Audio Player Simulator — {DISPLAY_WIDTH}×{DISPLAY_HEIGHT} ({PIXEL_SCALE}× scale)"
-        ),
-        &output_settings,
-    );
+    let mut window = mock_window::new();
 
     let mut subscriber = events.subscriber().unwrap();
     let publisher = events.publisher().unwrap();
@@ -95,7 +83,6 @@ pub async fn player_task(events: &'static EventChannel) {
             }
             Either::First(_) => {}
 
-            // 100ms elapsed → feed ourselves a Tick command, same door
             Either::Second(_) => {
                 for event in player.handle_event(&Event::Player(Command::Tick(100))) {
                     publisher.publish(event).await;
