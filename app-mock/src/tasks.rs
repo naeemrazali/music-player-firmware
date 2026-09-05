@@ -4,12 +4,12 @@ use embassy_sync::{
     pubsub::{PubSubChannel, WaitResult},
 };
 use embassy_time::{Duration, Ticker, Timer};
-use embedded_graphics::{pixelcolor::Gray8, prelude::*};
-use embedded_graphics_simulator::{
-    OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window, sdl2::Keycode,
-};
+use embedded_graphics_simulator::{OutputSettingsBuilder, SimulatorEvent, Window, sdl2::Keycode};
 
-use crate::mocks::mock_player;
+use crate::mocks::{
+    mock_display::{self, MockSimulatorDisplay},
+    mock_player,
+};
 use app_core::{
     event::{Button, Command, Event, Screen},
     ui::{
@@ -22,9 +22,7 @@ pub type EventChannel = PubSubChannel<CriticalSectionRawMutex, Event, 64, 2, 2>;
 
 #[embassy_executor::task]
 pub async fn ui_task(events: &'static EventChannel) {
-    let mut display: SimulatorDisplay<Gray8> =
-        SimulatorDisplay::new(Size::new(DISPLAY_WIDTH, DISPLAY_HEIGHT));
-
+    let mut display: MockSimulatorDisplay = mock_display::new();
     let output_settings = OutputSettingsBuilder::new()
         .scale(PIXEL_SCALE)
         .pixel_spacing(PIXEL_SPACING)
