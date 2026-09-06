@@ -1,5 +1,21 @@
 use crate::{track::Track, ui::screen_names::ScreenName};
 
+const QUEUE_LENGTH: usize = 8;
+type EventQueue = heapless::Vec<Event, QUEUE_LENGTH>;
+
+pub trait EventHandler {
+    fn event_queue(&mut self) -> &mut EventQueue;
+    fn handle_event(&mut self, event: &Event) -> EventQueue;
+    fn push_events(&mut self) -> EventQueue {
+        let mut events = heapless::Vec::new();
+        core::mem::swap(self.event_queue(), &mut events);
+        events
+    }
+    fn add_event(&mut self, event: Event) {
+        let _ = self.event_queue().push(event);
+    }
+}
+
 #[derive(Clone, Copy)]
 pub enum Button {
     Play,
