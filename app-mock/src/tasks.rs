@@ -6,11 +6,12 @@ use embassy_sync::{
 use embassy_time::{Duration, Ticker, Timer};
 use embedded_graphics_simulator::{SimulatorEvent, sdl2::Keycode};
 
-use crate::mocks::{mock_display, mock_player, mock_window};
 use app_core::{
     event::{Button, Command, Event, Screen},
     ui::screen_manager::ScreenManager,
 };
+
+use crate::mocks::{mock_display, mock_player, mock_window};
 
 pub type EventChannel = PubSubChannel<CriticalSectionRawMutex, Event, 64, 2, 2>;
 
