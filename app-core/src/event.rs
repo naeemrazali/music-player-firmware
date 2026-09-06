@@ -1,7 +1,7 @@
 use crate::{track::Track, ui::screen_names::ScreenName};
 
 const QUEUE_LENGTH: usize = 8;
-type EventQueue = heapless::Vec<Event, QUEUE_LENGTH>;
+pub type EventQueue = heapless::Vec<Event, QUEUE_LENGTH>;
 
 pub trait EventHandler {
     fn event_queue(&mut self) -> &mut EventQueue;
