@@ -6,10 +6,7 @@ use embassy_sync::{
 use embassy_time::{Duration, Ticker, Timer};
 use embedded_graphics_simulator::{SimulatorEvent, sdl2::Keycode};
 
-use crate::mocks::{
-    mock_display::{self, MockSimulatorDisplay},
-    mock_player, mock_window,
-};
+use crate::mocks::{mock_display, mock_player, mock_window};
 use app_core::{
     event::{Button, Command, Event, Screen},
     ui::screen_manager::ScreenManager,
@@ -19,13 +16,12 @@ pub type EventChannel = PubSubChannel<CriticalSectionRawMutex, Event, 64, 2, 2>;
 
 #[embassy_executor::task]
 pub async fn ui_task(events: &'static EventChannel) {
-    let mut display: MockSimulatorDisplay = mock_display::new();
-
+    let mut display = mock_display::new();
     let mut window = mock_window::new();
-
     let mut subscriber = events.subscriber().unwrap();
-    let publisher = events.publisher().unwrap();
     let mut screen_manager = ScreenManager::default();
+    let publisher = events.publisher().unwrap();
+
     screen_manager.draw(&mut display);
     window.update(&display);
 
@@ -71,8 +67,8 @@ pub async fn ui_task(events: &'static EventChannel) {
 pub async fn player_task(events: &'static EventChannel) {
     let mut player = mock_player::new();
     let mut subscriber = events.subscriber().unwrap();
-    let publisher = events.publisher().unwrap();
     let mut ticker = Ticker::every(Duration::from_millis(100));
+    let publisher = events.publisher().unwrap();
 
     loop {
         match select(subscriber.next_message(), ticker.next()).await {
