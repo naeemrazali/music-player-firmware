@@ -7,7 +7,7 @@ use embassy_time::{Duration, Ticker, Timer};
 use embedded_graphics_simulator::{SimulatorEvent, sdl2::Keycode};
 
 use app_core::{
-    event::{Button, Command, Event, Screen},
+    event::{Button, Command, Event, EventHandler, Screen},
     ui::screen_manager::ScreenManager,
 };
 

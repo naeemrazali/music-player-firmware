@@ -3,7 +3,7 @@ use embedded_graphics::pixelcolor::Gray8;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::Rectangle;
 
-use crate::event::{Button, Command, Event, Screen, State};
+use crate::event::{Button, Command, Event, EventHandler, EventQueue, Screen, State};
 use crate::track::Track;
 use crate::ui;
 use crate::ui::screen_names::ScreenName;
@@ -19,8 +19,12 @@ pub struct MainScreen {
     events: heapless::Vec<Event, 8>,
 }
 
-impl MainScreen {
-    pub fn handle_event(&mut self, event: &Event) -> heapless::Vec<Event, 8> {
+impl EventHandler for MainScreen {
+    fn event_queue(&mut self) -> &mut EventQueue {
+        &mut self.events
+    }
+
+    fn handle_event(&mut self, event: &Event) -> EventQueue {
         match event {
             Event::ButtonPress(Button::Play) => {
                 self.add_event(Event::Player(Command::Toggle));
@@ -57,17 +61,9 @@ impl MainScreen {
         }
         self.push_events()
     }
+}
 
-    pub fn push_events(&mut self) -> heapless::Vec<Event, 8> {
-        let mut events = heapless::Vec::new();
-        core::mem::swap(&mut self.events, &mut events);
-        events
-    }
-
-    fn add_event(&mut self, event: Event) {
-        let _ = self.events.push(event);
-    }
-
+impl MainScreen {
     pub fn draw(
         &self,
         display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
