@@ -10,6 +10,6 @@ static EVENTS: EventChannel = PubSubChannel::new();
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
-    spawner.spawn(ui_task(&EVENTS)).unwrap();
-    spawner.spawn(player_task(&EVENTS)).unwrap();
+    spawner.spawn(ui_task::run(&EVENTS)).unwrap();
+    spawner.spawn(player_task::run(&EVENTS)).unwrap();
 }

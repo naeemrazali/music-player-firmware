@@ -19,3 +19,4 @@ embassy-sync = "0.5"
 embassy-futures = "0.1"
 critical-section = { version = "1", features = ["std"] }
 heapless = "0.8"
+strum = { version = "0.27", default-features = false, features = ["derive"] }
