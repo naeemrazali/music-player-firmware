@@ -13,22 +13,18 @@ use crate::{
 pub async fn run(event_channel: &'static EventChannel) {
     const TICK_DURATION: u64 = 100;
 
-    let mut task = Task::new(event_channel);
-    let mut player = mock_player::new();
+    let mut task = Task::new(mock_player::new(), event_channel);
     let mut ticker = Ticker::every(Duration::from_millis(TICK_DURATION));
 
     loop {
         match select(task.subscriber.next_message(), ticker.next()).await {
             Either::First(WaitResult::Message(Event::Player(cmd))) => {
-                task.service_event(&mut player, &Event::Player(cmd)).await;
+                task.service_event(&Event::Player(cmd)).await;
             }
             Either::First(_) => {}
             Either::Second(_) => {
-                task.service_event(
-                    &mut player,
-                    &Event::Player(Command::Tick(TICK_DURATION as u32)),
-                )
-                .await;
+                task.service_event(&Event::Player(Command::Tick(TICK_DURATION as u32)))
+                    .await;
             }
         }
     }
