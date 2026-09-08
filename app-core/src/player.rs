@@ -106,6 +106,10 @@ impl Player {
     fn current_track(&mut self) {
         let track = self.playlist.current().copied();
         self.add_event(Event::Playback(State::TrackChanged(track)));
+        self.add_event(Event::Playback(State::ProgressUpdated {
+            elapsed_ms: self.elapsed_ms,
+            percent_elapsed: self.percent_elapsed(),
+        }));
     }
 
     fn next_track(&mut self) {
@@ -114,6 +118,10 @@ impl Player {
             Some(_) => {
                 self.elapsed_ms = 0;
                 self.add_event(Event::Playback(State::TrackChanged(track)));
+                self.add_event(Event::Playback(State::ProgressUpdated {
+                    elapsed_ms: self.elapsed_ms,
+                    percent_elapsed: self.percent_elapsed(),
+                }));
             }
             None => {
                 self.stop();
@@ -127,6 +135,10 @@ impl Player {
             Some(_) => {
                 self.elapsed_ms = 0;
                 self.add_event(Event::Playback(State::TrackChanged(track)));
+                self.add_event(Event::Playback(State::ProgressUpdated {
+                    elapsed_ms: self.elapsed_ms,
+                    percent_elapsed: self.percent_elapsed(),
+                }));
             }
             None => {
                 self.stop();

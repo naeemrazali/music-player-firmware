@@ -82,7 +82,6 @@ impl MainScreen {
             Some(track) => {
                 self.title.set_text(track.title);
                 self.artist.set_text(track.artist);
-                self.elapsed_time.set_text("00:00");
                 self.total_time
                     .set_text(core::str::from_utf8(&ui::fmt_time_ms(track.duration_ms)).unwrap());
             }
