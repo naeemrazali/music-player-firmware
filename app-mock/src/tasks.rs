@@ -33,22 +33,32 @@ type ChannelSubscriber = Subscriber<
 pub type EventChannel =
     PubSubChannel<CriticalSectionRawMutex, Event, QUEUE_LENGTH, NUM_SUBSCRIBERS, NUM_PUBLISHERS>;
 
-pub struct Task {
+pub struct Task<T: EventHandler> {
     publisher: ChannelPublisher,
     subscriber: ChannelSubscriber,
+    actor: T,
 }
 
-impl Task {
-    fn new(event_channel: &'static EventChannel) -> Self {
+impl<T: EventHandler> Task<T> {
+    fn new(actor: T, event_channel: &'static EventChannel) -> Self {
         Self {
+            actor,
             publisher: event_channel.publisher().unwrap(),
             subscriber: event_channel.subscriber().unwrap(),
         }
     }
 
-    async fn service_event(&mut self, event_handler: &mut dyn EventHandler, event: &Event) {
-        for event in event_handler.handle_event(event) {
+    async fn service_event(&mut self, event: &Event) {
+        for event in self.actor.handle_event(event) {
             self.publisher.publish(event).await;
         }
+    }
+
+    pub fn actor(&self) -> &T {
+        &self.actor
+    }
+
+    pub fn actor_mut(&mut self) -> &mut T {
+        &mut self.actor
     }
 }
