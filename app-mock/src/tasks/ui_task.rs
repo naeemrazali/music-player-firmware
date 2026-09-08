@@ -39,16 +39,12 @@ pub async fn run(event_channel: &'static EventChannel) {
             }
             Either::First(_) => {}
             Either::Second(_) => {
-                for event in window.events() {
-                    match event {
-                        SimulatorEvent::Quit => std::process::exit(0),
-                        SimulatorEvent::KeyDown { keycode, .. } => {
-                            if let Some(button_press) = map_key(&keycode) {
-                                task.service_event(&button_press).await;
-                            }
-                        }
-                        _ => {}
-                    }
+                if let Some(button_press) = window.events().find_map(|event| match event {
+                    SimulatorEvent::Quit => std::process::exit(0),
+                    SimulatorEvent::KeyDown { keycode, .. } => map_key(&keycode),
+                    _ => None,
+                }) {
+                    task.service_event(&button_press).await;
                 }
             }
         }
