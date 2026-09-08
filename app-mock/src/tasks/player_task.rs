@@ -18,8 +18,8 @@ pub async fn run(event_channel: &'static EventChannel) {
 
     loop {
         match select(task.subscriber.next_message(), ticker.next()).await {
-            Either::First(WaitResult::Message(Event::Player(cmd))) => {
-                task.service_event(&Event::Player(cmd)).await;
+            Either::First(WaitResult::Message(event @ Event::Player(_))) => {
+                task.service_event(&event).await;
             }
             Either::First(_) => {}
             Either::Second(_) => {

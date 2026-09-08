@@ -28,11 +28,11 @@ pub async fn run(event_channel: &'static EventChannel) {
         let timeout = Timer::after(Duration::from_millis(33));
 
         match select(task.subscriber.next_message(), timeout).await {
-            Either::First(WaitResult::Message(Event::Playback(state))) => {
-                task.service_event(&Event::Playback(state)).await;
+            Either::First(WaitResult::Message(event @ Event::Playback(_))) => {
+                task.service_event(&event).await;
             }
-            Either::First(WaitResult::Message(Event::Ui(Screen::Change(screen)))) => {
-                task.service_event(&Event::Ui(Screen::Change(screen))).await;
+            Either::First(WaitResult::Message(event @ Event::Ui(Screen::Change(_)))) => {
+                task.service_event(&event).await;
             }
             Either::First(WaitResult::Message(Event::Ui(Screen::Refresh))) => {
                 refresh_screen(task.actor(), &mut window, &mut display);
