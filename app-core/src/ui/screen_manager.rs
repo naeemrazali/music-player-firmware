@@ -31,13 +31,16 @@ impl EventHandler for ScreenManager {
     }
 
     fn handle_event(&mut self, event: &Event) -> EventQueue {
-        if let Event::Ui(Screen::Change(screen)) = event {
-            self.current_screen = *screen;
-            return heapless::Vec::new();
-        }
-        match self.current_screen {
-            ScreenName::Main => self.main.handle_event(event),
-            ScreenName::Settings => self.settings.handle_event(event),
+        match event {
+            Event::Ui(Screen::Change(screen)) => {
+                self.current_screen = *screen;
+                heapless::Vec::new()
+            }
+            Event::Playback(_) => self.main.handle_event(event),
+            _ => match self.current_screen {
+                ScreenName::Main => self.main.handle_event(event),
+                ScreenName::Settings => self.settings.handle_event(event),
+            },
         }
     }
 }
