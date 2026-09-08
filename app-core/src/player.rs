@@ -141,7 +141,12 @@ impl Player {
                 }));
             }
             None => {
+                self.elapsed_ms = 0;
                 self.stop();
+                self.add_event(Event::Playback(State::ProgressUpdated {
+                    elapsed_ms: self.elapsed_ms,
+                    percent_elapsed: self.percent_elapsed(),
+                }));
             }
         }
     }
