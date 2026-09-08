@@ -57,8 +57,4 @@ impl<T: EventHandler> Task<T> {
     pub fn actor(&self) -> &T {
         &self.actor
     }
-
-    pub fn actor_mut(&mut self) -> &mut T {
-        &mut self.actor
-    }
 }
