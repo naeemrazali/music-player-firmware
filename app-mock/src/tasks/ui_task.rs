@@ -18,27 +18,24 @@ use crate::{
 
 #[embassy_executor::task]
 pub async fn run(event_channel: &'static EventChannel) {
-    let mut task = Task::new(event_channel);
-    let mut screen_manager = ScreenManager::default();
+    let mut task = Task::new(ScreenManager::default(), event_channel);
     let mut display = mock_display::new();
     let mut window = mock_window::new();
 
-    refresh_screen(&screen_manager, &mut window, &mut display);
+    refresh_screen(task.actor(), &mut window, &mut display);
 
     loop {
         let timeout = Timer::after(Duration::from_millis(33));
 
         match select(task.subscriber.next_message(), timeout).await {
             Either::First(WaitResult::Message(Event::Playback(state))) => {
-                task.service_event(&mut screen_manager, &Event::Playback(state))
-                    .await;
+                task.service_event(&Event::Playback(state)).await;
             }
             Either::First(WaitResult::Message(Event::Ui(Screen::Change(screen)))) => {
-                task.service_event(&mut screen_manager, &Event::Ui(Screen::Change(screen)))
-                    .await;
+                task.service_event(&Event::Ui(Screen::Change(screen))).await;
             }
             Either::First(WaitResult::Message(Event::Ui(Screen::Refresh))) => {
-                refresh_screen(&screen_manager, &mut window, &mut display);
+                refresh_screen(task.actor(), &mut window, &mut display);
             }
             Either::First(_) => {}
             Either::Second(_) => {
@@ -47,7 +44,7 @@ pub async fn run(event_channel: &'static EventChannel) {
                         SimulatorEvent::Quit => std::process::exit(0),
                         SimulatorEvent::KeyDown { keycode, .. } => {
                             if let Some(button_press) = map_key(&keycode) {
-                                task.service_event(&mut screen_manager, &button_press).await;
+                                task.service_event(&button_press).await;
                             }
                         }
                         _ => {}
