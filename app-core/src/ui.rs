@@ -20,9 +20,9 @@ pub fn clear_background(
 }
 
 pub struct Label<'a> {
-    pub text: String<32>,
-    pub position: Point,
-    pub style: MonoTextStyle<'a, Gray8>,
+    text: String<32>,
+    position: Point,
+    style: MonoTextStyle<'a, Gray8>,
 }
 
 impl<'a> Label<'a> {
@@ -52,10 +52,10 @@ impl<'a> Label<'a> {
 }
 
 pub struct ProgressBar {
-    pub rect: Rectangle,
-    pub percent: u32,
-    pub rect_colour: Gray8,
-    pub fill_colour: Gray8,
+    rect: Rectangle,
+    percent: u32,
+    rect_colour: Gray8,
+    fill_colour: Gray8,
 }
 
 impl ProgressBar {

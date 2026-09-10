@@ -63,7 +63,7 @@ impl Player {
         };
     }
 
-    pub fn tick(&mut self, delta_ms: u32) {
+    fn tick(&mut self, delta_ms: u32) {
         if self.is_playing {
             let total = self.total_ms();
             self.elapsed_ms = self.elapsed_ms.saturating_add(delta_ms).min(total);
