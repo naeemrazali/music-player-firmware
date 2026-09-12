@@ -1,0 +1,22 @@
+[package]
+name = "app-mock"
+version = "0.1.0"
+edition = "2024"
+description = "Desktop simulator for the embedded audio player UI"
+
+[dependencies]
+app-core = { path = "../app-core" }
+embedded-graphics = "0.8"
+embedded-graphics-simulator = "0.8"
+embassy-executor = { version = "0.5", features = [
+  "arch-std",
+  "executor-thread",
+  "integrated-timers",
+  "task-arena-size-131072",
+] }
+embassy-time = { version = "0.3", features = ["std"] }
+embassy-sync = "0.5"
+embassy-futures = "0.1"
+critical-section = { version = "1", features = ["std"] }
+heapless = "0.8"
+strum = { version = "0.27", default-features = false, features = ["derive"] }
