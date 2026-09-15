@@ -8,9 +8,12 @@ Embedded Rust portable audio player built on the **STM32H7A3VI** microcontroller
 chip which handles digital-to-analogue conversion and drives the headphones.
 
 The UI and player logic communicate via an **actor-model event system** using
-`heapless::Vec<Event, 8>` internal queues. Embassy `Channel` / `Signal` will bridge
-these queues between async tasks on the STM32. The desktop simulator validates this
-pattern with a single-threaded event cascade.
+`heapless::Vec<Event, 8>` internal queues, formalised by the `EventHandler` trait.
+A static Embassy `PubSubChannel` bridges these queues between async tasks — this is
+no longer just planned: the desktop simulator runs the real Embassy executor
+(`arch-std`) with `ui_task` and `player_task` spawned from `#[embassy_executor::main]`,
+so the task/channel design is validated on the host before firmware bringup. The same
+design carries over to the STM32 firmware tasks.
 
 A desktop **mock** crate mirrors the embedded display using `embedded-graphics-simulator`
 so UI code can be developed and tested without hardware.
@@ -18,8 +21,13 @@ so UI code can be developed and tested without hardware.
 ### Current status
 
 - **Done:** retained-mode GUI framework, `Player` + `Playlist` state machines (actor model,
-  event queues), transport controls + progress bar UI, `app-hal` trait definitions, `app-mock`
-  simulator loop. 15 host unit tests pass (`cargo test -p app-hal -p app-core`).
+  `EventHandler` trait, event queues), transport controls + progress bar UI, `app-hal` trait
+  definitions, `app-mock` simulator running the real Embassy executor with a static
+  `PubSubChannel` bridging `ui_task` / `player_task`. 15 host unit tests pass
+  (`cargo test -p app-hal -p app-core`) and `app-mock` compiles cleanly.
+- **Known broken:** `cargo clippy --workspace -- -D warnings` currently fails on `app-core`
+  with 4 lints (`new_without_default` and `result_unit_err` on `Playlist`, `should_implement_trait`
+  on `Playlist::next`, derivable `Default` impl on `Track`). Fix before enabling in CI.
 - **Not started:** Symphonia decoding (`app-core/src/decoder.rs`), HAL mock implementations,
   `memory.x`, CI pipeline, and all hardware bringup (the `app-firmware` crate is still a
   hello-world placeholder with no dependencies and does not yet build for the embedded target).
@@ -76,13 +84,15 @@ music-player-firmware/
 ├── app-hal/                        # HAL traits ONLY (no deps yet)
 │   └── src/
 │       └── lib.rs                  # AudioFileReader, AudioOutput traits + error enums
-│                                   # `mock` module declared behind (unimplemented) `std` feature
+│                                   # (a `mock` module is sketched out in comments,
+│                                   #  gated behind a `std` feature, but not active)
 │
 ├── app-core/                       # Pure business logic — no hardware dependencies
 │   └── src/
 │       ├── lib.rs                  # Module declarations
-│       ├── event.rs                # Button, Playback, Screen, Event enums
-│       ├── player.rs               # Playback actor — emits events, owns state
+│       ├── event.rs                # Button, Command, State, Screen, Event enums +
+│       │                           #   EventHandler trait, EventQueue type
+│       ├── player.rs               # Playback actor — implements EventHandler, owns state
 │       ├── player/
 │       │   └── tests.rs            # Player unit tests (submodule pattern)
 │       ├── playlist.rs             # Fixed-capacity (32) track list
@@ -90,12 +100,13 @@ music-player-firmware/
 │       │   └── tests.rs            # Playlist unit tests (submodule pattern)
 │       ├── track.rs                # Track metadata (Copy, &'static str fields)
 │       └── ui/
-│           ├── ui.rs (ui.rs)       # Widgets live here: Label, ProgressBar, PlayButton,
+│           ├── ui.rs               # Widgets live here: Label, ProgressBar, PlayButton,
 │           │                       #   HorizontalLine, List, clear_background, fmt_time_ms
 │           ├── display_config.rs   # DISPLAY_WIDTH/HEIGHT (240×240), PIXEL_SCALE (3)
 │           ├── screen_names.rs     # ScreenName enum (Main, Settings)
-│           ├── screen_manager.rs   # Routes events to active screen
-│           └── screens/
+│           ├── screen_manager.rs   # EventHandler impl routing events to active screen
+│           └── screens/            # Screen structs (MainScreen, SettingsScreen), each
+│               │                   #   an EventHandler with its own event queue
 │               ├── main_screen.rs
 │               └── settings_screen.rs
 │
@@ -104,11 +115,17 @@ music-player-firmware/
 │   └── src/
 │       └── main.rs                 # (placeholder hello-world — no dependencies yet)
 │
-└── app-mock/                       # Desktop UI simulator — std, runs on host
+└── app-mock/                       # Desktop simulator — std, runs real Embassy executor
     ├── Cargo.toml                  # edition = "2024"
     └── src/
-        └── main.rs                 # SDL2 + single-threaded event cascade
-                                    # Simulates player_task / ui_task roles
+        ├── main.rs                 # #[embassy_executor::main], static PubSubChannel,
+        │                           #   spawns ui_task + player_task
+        ├── tasks.rs                # Task<T: EventHandler> struct (owns actor + pub/sub
+        │                           #   endpoints), EventChannel type aliases
+        ├── tasks/
+        │   ├── player_task.rs      # Player task — services Player commands + 100ms tick
+        │   └── ui_task.rs          # UI task — keyboard input, screen refresh loop
+        └── mocks.rs                # mock_display, mock_window, mock_player constructors
 ```
 
 ---
@@ -123,7 +140,8 @@ music-player-firmware/
    also gating it behind `#[cfg(not(test))]`.
 
 3. **All drawing code uses `DrawTarget<Color = Gray8>`** — never reference
-   `SimulatorDisplay` directly outside of `app-mock/src/main.rs`. This keeps UI code
+   `SimulatorDisplay` directly outside of `app-mock/src/mocks/mock_display.rs`
+   (where the `MockSimulatorDisplay` alias is defined). This keeps UI code
    portable to the real display driver with zero changes.
 
 4. **PCM DMA buffers go in AXISRAM** via `#[link_section = ".axisram"]`. Do not place
@@ -219,10 +237,10 @@ Approximate runtime memory budget:
 ```rust
 // Storage abstraction
 pub trait AudioFileReader {
-    fn open(&mut self, filename: &str)   -> Result<(), FileError>;
-    fn read(&mut self, buf: &mut [u8])   -> Result<usize, FileError>;
-    fn seek(&mut self, pos: u64)         -> Result<(), FileError>;
-    fn file_len(&self)                   -> Result<u64, FileError>;
+    fn open(&mut self, path: &str)     -> Result<(), FileError>;
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize, FileError>;
+    fn seek(&mut self, pos: u64)       -> Result<(), FileError>;
+    fn file_len(&self)                 -> Result<u64, FileError>;
 }
 
 // Audio output abstraction
@@ -252,16 +270,20 @@ Error enums (also in `app-hal/src/lib.rs`):
 - **Pixel colour:** `Gray8` — grayscale pixels. Chosen to match the target monochrome LCD display.
 - **Placeholder resolution:** 240×240. Change `DISPLAY_WIDTH` / `DISPLAY_HEIGHT` in
   `ui/display_config.rs` once the real display is chosen.
-- **Scale:** `PIXEL_SCALE = 3` — zooms the desktop window to a comfortable size.
+- **Scale:** `PIXEL_SCALE = 3` (with `PIXEL_SPACING = 0`) — zooms the desktop window to a
+  comfortable size.
 - **Keyboard shortcuts in simulator:**
   - `Space` — toggle play/pause
-  - `M` — open Settings
+  - `M` — toggle Settings / Main screen
   - `N` — next track
   - `P` — previous track
-  - `0`–`9` — seek to 0%–90%
+  - `1`–`9` — seek to 10%–90%; `0` — seek to 0%
   - `Escape / close` — quit
-- **SDL2 required on host:**
-
+- **SDL2 required on host:** install via your distro (e.g. `libsdl2-dev`) — the
+  `embedded-graphics-simulator` window depends on it.
+- **Note:** `app-mock` runs the real Embassy executor on the host
+  (`embassy-executor` with `arch-std`, `embassy-time` with `std`), so async task code
+  written here transfers directly to the firmware.
 - Run with: `cargo run -p app-mock` (from workspace root — uses host target).
 
 ---
@@ -296,8 +318,21 @@ All inter-module communication uses a unified `Event` enum:
 ```rust
 pub enum Event {
     ButtonPress(Button),            // Input layer (SDL2 / GPIO)
-    Player(Playback),               // Commands to Player, or state changes from Player
+    Player(Command),                // Commands TO the Player (Toggle, Seek, NextTrack, …)
+    Playback(State),                // State changes FROM the Player (TrackChanged, …)
     Ui(Screen),                     // Screen transitions, refresh requests
+}
+```
+
+The `Player(Command)` / `Playback(State)` split keeps direction explicit: commands flow
+into the player actor, state changes flow out. The `EventHandler` trait unifies this:
+
+```rust
+pub trait EventHandler {
+    fn event_queue(&mut self) -> &mut EventQueue;
+    fn handle_event(&mut self, event: &Event) -> EventQueue;
+    fn push_events(&mut self) -> EventQueue;  // drains the internal queue
+    fn add_event(&mut self, event: Event);
 }
 ```
 
@@ -305,22 +340,38 @@ pub enum Event {
 
 | Actor | Owned by | Receives | Emits |
 |---|---|---|---|
-| **Player** | `player_task` | `Event::Player(Playback::*)` commands, PCM consumed events | `TrackChanged`, `Toggled`, `ProgressUpdated`, `Stopped` |
-| **Decoder** | `decode_task` | File path / seek commands from Player | `DecodeError`, buffered PCM |
-| **Active Screen** | `ui_task` | `ButtonPress`, `Player` events | `Player` commands, `Ui(Refresh)`, `Ui(Change)` |
+| **Player** | `player_task` | `Event::Player(Command::*)`, 100ms `Tick` | `Playback(State::*)`: `TrackChanged`, `Toggled`, `ProgressUpdated`, `Stopped` |
+| **Decoder** | `decode_task` (planned) | File path / seek commands from Player | `DecodeError`, buffered PCM |
+| **Active Screen** | `ui_task` | `ButtonPress`, `Playback(State::*)` | `Player` commands, `Ui(Refresh)`, `Ui(Change)` |
 | **ScreenManager** | `ui_task` | `Ui(Change)` | Routes events to active screen |
+
+### Task bridging (app-mock, and later app-firmware)
+
+- A static `PubSubChannel<CriticalSectionRawMutex, Event, 64, 2, 2>` (`EventChannel` in
+  `app-mock/src/tasks.rs`) is shared by all tasks. Each task wraps its actor in the
+  generic `Task<T: EventHandler>` struct, which owns a publisher + subscriber endpoint
+  and calls `actor.handle_event()`, then publishes the resulting events.
+- **player_task** selects between `subscriber.next_message()` and a 100ms `Ticker`.
+  It services `Event::Player(_)` commands and injects `Command::Tick(100)` on timeout.
+- **ui_task** selects between `subscriber.next_message()` and a 33ms timeout. It
+  services `Playback(_)` state changes (which schedule `Screen::Refresh`) and
+  `Ui(Screen::Change)`, and polls SDL2 for keyboard input on timeout.
+- **Event echo control:** each task filters which channel messages it services, so
+  events published by a task are not re-processed by it (no infinite loops).
 
 ### Initialization
 
-`Player::initialize()` is called once at startup to emit the initial
-`TrackChanged`, `Toggled`, and `ProgressUpdated` events, bootstrapping the
-first draw without a special-case initial-sync path.
+`Player::new(playlist)` seeds the initial state: it emits `TrackChanged`,
+`Toggled(true)`, and `ProgressUpdated` events into its internal queue at construction,
+bootstrapping the first UI draw without a special-case initial-sync path. In the
+simulator, `mock_player::new()` constructs the `Player` (with a 2-track mock playlist)
+and the ui_task performs an initial `refresh_screen` before its event loop starts.
 
 ---
 
 ## Audio Pipeline (planned target state)
 
-FLAC decoding will be handled by a `Decoder` actor in `app-core` (not yet implemented — Milestone 4):
+FLAC decoding will be handled by a `Decoder` actor in `app-core` (not yet implemented — Milestone 5):
 
 ```
 SD card bytes → AudioFileReader → Decoder (Symphonia) → AudioOutput → DAC
@@ -330,7 +381,7 @@ SD card bytes → AudioFileReader → Decoder (Symphonia) → AudioOutput → DA
 
 The decoder will run in its own async task, filling a bounded PCM buffer. `Player` will consume samples from this buffer each `tick()`, advancing `elapsed_ms` based on actual sample consumption rather than a simulated timer.
 
-**Today**, `Player::tick(delta_ms)` simply advances `elapsed_ms` by a simulated time delta (the desktop simulator passes ~33ms per frame), so progress advances even without decoding.
+**Today**, `Player::tick(delta_ms)` simply advances `elapsed_ms` by a simulated time delta (the desktop simulator's `player_task` injects a 100ms `Command::Tick` via an Embassy `Ticker`), so progress advances even without decoding.
 
 ---
 
@@ -338,13 +389,14 @@ The decoder will run in its own async task, filling a bounded PCM buffer. `Playe
 
 - [x] **Milestone 1** Retained-mode GUI framework (`app-core` + `app-mock`) — widget structs (`Label`, `ProgressBar`, `PlayButton`, `List`), screen composition via `Default`, `app-mock` update/sync/draw loop with keyboard navigation
 - [x] **Milestone 2** Player state machine + playlist logic (`app-core`, host-tested) — actor model with event-driven state changes, auto-advance, next/prev
-- [x] **Milestone 3** Transport controls + progress bar UI (event-driven, auto-advance) — single-threaded event cascade in `app-mock` simulates Embassy tasks
-- [ ] **Milestone 4** FLAC decode via Symphonia (desktop end-to-end) — `app-core/src/decoder.rs`, `app-hal` traits, host end-to-end test
-- [ ] **Milestone 5** HAL traits + mocks (`app-hal`) — traits exist; `MockFileReader`/`MockAudioOutput` still to write
-- [ ] **Milestone 6** Hardware bringup (STM32 boot, LED blink, RTT logs)
-- [ ] **Milestone 7** AK4377 I2C init + SAI sine wave
-- [ ] **Milestone 8** SD card reads + raw PCM playback
-- [ ] **Milestone 9** Combine file read and play song on AK4377
+- [x] **Milestone 3** Transport controls + progress bar UI (event-driven, auto-advance) — `EventHandler` trait + `PubSubChannel` task bridging running on the real Embassy executor in `app-mock`
+- [ ] **Milestone 4** File system + playlist database — scan storage for audio files (FLAC/MP3), build a track database that populates `Playlist` from real file metadata instead of hardcoded `Track`s; mock the file system on desktop so scanning + database work end-to-end in the simulator
+- [ ] **Milestone 5** FLAC decode via Symphonia (desktop end-to-end) — `app-core/src/decoder.rs`, `app-hal` traits, host end-to-end test
+- [ ] **Milestone 6** HAL traits + mocks (`app-hal`) — traits exist; `MockFileReader`/`MockAudioOutput` still to write
+- [ ] **Milestone 7** Hardware bringup (STM32 boot, LED blink, RTT logs)
+- [ ] **Milestone 8** AK4377 I2C init + SAI sine wave
+- [ ] **Milestone 9** SD card reads + raw PCM playback
+- [ ] **Milestone 10** Combine file read and play song on AK4377
 
 
 ## Running Common Tasks
