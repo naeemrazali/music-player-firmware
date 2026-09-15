@@ -36,25 +36,25 @@ pub type EventChannel =
 pub struct Task<T: EventHandler> {
     publisher: ChannelPublisher,
     subscriber: ChannelSubscriber,
-    actor: T,
+    handler: T,
 }
 
 impl<T: EventHandler> Task<T> {
-    fn new(actor: T, event_channel: &'static EventChannel) -> Self {
+    fn new(handler: T, event_channel: &'static EventChannel) -> Self {
         Self {
-            actor,
+            handler,
             publisher: event_channel.publisher().unwrap(),
             subscriber: event_channel.subscriber().unwrap(),
         }
     }
 
     async fn service_event(&mut self, event: &Event) {
-        for event in self.actor.handle_event(event) {
+        for event in self.handler.handle_event(event) {
             self.publisher.publish(event).await;
         }
     }
 
-    pub fn actor(&self) -> &T {
-        &self.actor
+    pub fn handler(&self) -> &T {
+        &self.handler
     }
 }

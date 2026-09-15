@@ -22,7 +22,7 @@ pub async fn run(event_channel: &'static EventChannel) {
     let mut display = mock_display::new();
     let mut window = mock_window::new();
 
-    refresh_screen(task.actor(), &mut window, &mut display);
+    refresh_screen(task.handler(), &mut window, &mut display);
 
     loop {
         let timeout = Timer::after(Duration::from_millis(33));
@@ -35,7 +35,7 @@ pub async fn run(event_channel: &'static EventChannel) {
                 task.service_event(&event).await;
             }
             Either::First(WaitResult::Message(Event::Ui(Screen::Refresh))) => {
-                refresh_screen(task.actor(), &mut window, &mut display);
+                refresh_screen(task.handler(), &mut window, &mut display);
             }
             Either::First(_) => {}
             Either::Second(_) => {
