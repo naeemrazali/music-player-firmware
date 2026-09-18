@@ -2,10 +2,10 @@ use super::*;
 
 fn track(title: &'static str, duration_ms: u32) -> Track {
     Track {
-        title,
-        artist: "Test Artist",
+        title: title.parse().unwrap(),
+        artist: "Test Artist".parse().unwrap(),
         duration_ms,
-        file_path: "/test",
+        file_index: 0,
     }
 }
 
