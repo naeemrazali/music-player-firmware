@@ -1,21 +1,30 @@
 [workspace]
-members = ["app-hal", "app-core", "app-firmware", "app-mock"]
+members = ["app-core", "app-firmware", "app-mock"]
 resolver = "3"
 
 [workspace.dependencies]
-embassy-stm32    = { version = "0.1", features = ["stm32h7a3vi", "time-driver-any"] }
-embassy-executor = { version = "0.5", features = ["arch-cortex-m", "executor-thread"] }
-embassy-sync     = "0.5"
-embassy-time     = "0.3"
-defmt            = "0.3"
-defmt-rtt        = "0.4"
-symphonia        = { version = "0.5", default-features = false, features = ["mp3", "flac"] }
-embedded-alloc   = "0.5"
-embedded-sdmmc   = "0.7"
-heapless         = "0.8"
+embassy-stm32 = { version = "0.1", features = [
+  "stm32h7a3vi",
+  "time-driver-any",
+] }
+embassy-executor = { version = "0.5", features = [
+  "arch-cortex-m",
+  "executor-thread",
+] }
+embassy-sync = "0.5"
+embassy-time = "0.3"
+defmt = "0.3"
+defmt-rtt = "0.4"
+symphonia = { version = "0.5", default-features = false, features = [
+  "mp3",
+  "flac",
+] }
+embedded-alloc = "0.5"
+embedded-sdmmc = "0.7"
+heapless = "0.8"
 
 [profile.release]
-opt-level     = "s"
-lto           = true
+opt-level = "s"
+lto = true
 codegen-units = 1
-debug         = true    # Keep debug info for probe-rs even in release
+debug = true      # Keep debug info for probe-rs even in release
