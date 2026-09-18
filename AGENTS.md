@@ -20,17 +20,34 @@ so UI code can be developed and tested without hardware.
 
 ### Current status
 
-- **Done:** retained-mode GUI framework, `Player` + `Playlist` state machines (actor model,
-  `EventHandler` trait, event queues), transport controls + progress bar UI, `app-hal` trait
-  definitions, `app-mock` simulator running the real Embassy executor with a static
-  `PubSubChannel` bridging `ui_task` / `player_task`. 15 host unit tests pass
-  (`cargo test -p app-hal -p app-core`) and `app-mock` compiles cleanly.
-- **Known broken:** `cargo clippy --workspace -- -D warnings` currently fails on `app-core`
-  with 4 lints (`new_without_default` and `result_unit_err` on `Playlist`, `should_implement_trait`
-  on `Playlist::next`, derivable `Default` impl on `Track`). Fix before enabling in CI.
-- **Not started:** Symphonia decoding (`app-core/src/decoder.rs`), HAL mock implementations,
-  `memory.x`, CI pipeline, and all hardware bringup (the `app-firmware` crate is still a
-  hello-world placeholder with no dependencies and does not yet build for the embedded target).
+- **Done:** retained-mode GUI framework, `Player` + `Playlist` state machines (actor-model
+  pattern, `EventHandler` trait, event queues), transport controls + progress bar UI,
+  `app-hal` trait definitions, `app-mock` simulator running the real Embassy executor with
+  a static `PubSubChannel` bridging `ui_task` / `player_task`. 15 host unit tests pass.
+  Recent changes: `Task`'s actor field/accessor renamed to `handler` (cee3100); `Track`
+  migrated from `&'static str` to `heapless::String` fields (72cd7a7) so tracks can come
+  from runtime discovery instead of hardcoded literals.
+- **In flight — build currently broken:** the `Track` string migration is committed but
+  its ripple is unfinished (8 errors in `app-core`). To finish it: drop `Copy` from
+  `State` and `Event` in `event.rs` (`Button`/`Command`/`Screen` keep it); `.copied()` →
+  `.cloned()` in `player.rs` (`current_track`, `next_track`, `prev_track`);
+  `set_text(&track.title)` / `set_text(&track.artist)` in `main_screen.rs`; `.into()` for
+  string literals in `playlist/tests.rs`, `player/tests.rs`, `mock_player.rs`.
+- **Known broken (lints):** once compiling again, `cargo clippy --workspace -- -D warnings`
+  still fails with 3 `Playlist` lints (`new_without_default`, `result_unit_err` on `add`,
+  `should_implement_trait` on `next`) — currently masked by the compile errors. The 4th
+  lint (derivable `Default` on `Track`) was resolved by the String migration. Fix before
+  enabling clippy in CI.
+- **Decided for M4 (not yet implemented):** `app-hal` dissolves — all platform-agnostic
+  traits (`AudioFileReader`, `AudioOutput`, new `Filesystem`) move to
+  `app-core/src/hal.rs` ("ports in the core, adapters at the edges": `app-core` is their
+  only consumer, so the pass-through crate adds no value). Mocks: `MockFilesystem`
+  (in-memory, pure `no_std`) in `app-core/src/hal/mock.rs`; `HostFilesystem` (`std::fs`)
+  in `app-mock/src/mocks/host_fs.rs`. The volume scanner lives in `app-core/src/library.rs`.
+  See Milestones.
+- **Not started:** Symphonia decoding (`app-core/src/decoder.rs`), `memory.x`, CI pipeline,
+  and all hardware bringup (the `app-firmware` crate is still a hello-world placeholder
+  with no dependencies and does not yet build for the embedded target).
 
 ---
 
@@ -81,8 +98,8 @@ music-player-firmware/
 │   └── config.toml                 # `[target.thumbv7em-none-eabihf]` runner + rustflags only
 │                                   # NO [build] target here — see app-firmware below
 │
-├── app-hal/                        # HAL traits ONLY (no deps yet)
-│   └── src/
+├── app-hal/                        # HAL traits ONLY — (DECIDED: dissolves into
+│   └── src/                        #   app-core/src/hal.rs in M4; do not add
 │       └── lib.rs                  # AudioFileReader, AudioOutput traits + error enums
 │                                   # (a `mock` module is sketched out in comments,
 │                                   #  gated behind a `std` feature, but not active)
@@ -92,13 +109,22 @@ music-player-firmware/
 │       ├── lib.rs                  # Module declarations
 │       ├── event.rs                # Button, Command, State, Screen, Event enums +
 │       │                           #   EventHandler trait, EventQueue type
-│       ├── player.rs               # Playback actor — implements EventHandler, owns state
+│       ├── player.rs               # Player handler — implements EventHandler, owns state
 │       ├── player/
 │       │   └── tests.rs            # Player unit tests (submodule pattern)
 │       ├── playlist.rs             # Fixed-capacity (32) track list
 │       ├── playlist/
-│       │   └── tests.rs            # Playlist unit tests (submodule pattern)
-│       ├── track.rs                # Track metadata (Copy, &'static str fields)
+│       │   └── tests.rs           # Playlist unit tests (submodule pattern)
+│       ├── track.rs                # Track metadata (Clone, heapless::String fields)
+│       ├── hal.rs                  # (M4, planned) platform-agnostic ports:
+│       │                           #   Filesystem, AudioFileReader, AudioOutput,
+│       │                           #   DirEntry, FileError, OutputError
+│       ├── hal/
+│       │   └── mock.rs             # (M4, planned) MockFilesystem — in-memory tree,
+│       │                           #   pure no_std, no feature gate
+│       ├── library.rs              # (M4, planned) volume scanner + track database:
+│       │                           #   scan(fs, root) -> Playlist from real file
+│       │                           #   discovery instead of hardcoded Tracks
 │       └── ui/
 │           ├── ui.rs               # Widgets live here: Label, ProgressBar, PlayButton,
 │           │                       #   HorizontalLine, List, clear_background, fmt_time_ms
@@ -120,12 +146,15 @@ music-player-firmware/
     └── src/
         ├── main.rs                 # #[embassy_executor::main], static PubSubChannel,
         │                           #   spawns ui_task + player_task
-        ├── tasks.rs                # Task<T: EventHandler> struct (owns actor + pub/sub
+        ├── tasks.rs                # Task<T: EventHandler> struct (owns handler + pub/sub
         │                           #   endpoints), EventChannel type aliases
         ├── tasks/
         │   ├── player_task.rs      # Player task — services Player commands + 100ms tick
         │   └── ui_task.rs          # UI task — keyboard input, screen refresh loop
-        └── mocks.rs                # mock_display, mock_window, mock_player constructors
+        ├── mocks.rs                # mock_display, mock_window, mock_player constructors
+        └── mocks/
+            └── host_fs.rs          # (M4, planned) HostFilesystem — std::fs impl for
+                                    #   the simulator's Filesystem port
 ```
 
 ---
@@ -133,10 +162,10 @@ music-player-firmware/
 ## Architecture Rules
 
 1. **Hardware code lives only in `app-firmware/src/drivers/` and `app-firmware/src/tasks/`.**
-   No Embassy types, no STM32 peripheral types anywhere in `app-core` or `app-hal`.
+   No Embassy types, no STM32 peripheral types anywhere in `app-core`.
 
-2. **`app-core` and `app-hal` must compile with `cargo test` on the host** (std enabled).
-   Never add `embassy-*`, `cortex-m`, or any `no_std`-only dep to these crates without
+2. **`app-core` must compile with `cargo test` on the host** (std enabled).
+   Never add `embassy-*`, `cortex-m`, or any `no_std`-only dep to `app-core` without
    also gating it behind `#[cfg(not(test))]`.
 
 3. **All drawing code uses `DrawTarget<Color = Gray8>`** — never reference
@@ -163,9 +192,14 @@ music-player-firmware/
    inside `src/<module>.rs`. This keeps source files readable while retaining
    `use super::*` access to private items.
 
-9. **HAL traits live in `app-hal`; hardware implementations live in `app-firmware`.**
-   `app-hal` must never contain Embassy types, STM32 peripherals, or board-specific code.
-   It only defines traits and provides `std`-based mock implementations for host testing.
+9. **Ports live in `app-core/src/hal.rs`; adapters live at the edges.** Platform-agnostic
+   traits (`Filesystem`, `AudioFileReader`, `AudioOutput`) and their supporting types
+   (`DirEntry`, `FileError`, `OutputError`) are defined in the core, next to their only
+   consumer. Hardware implementations live in `app-firmware/src/drivers/`; host
+   implementations (mocks) live in `app-core/src/hal/mock.rs` (pure `no_std`) and
+   `app-mock/src/mocks/` (`std`-dependent, e.g. `HostFilesystem`). These definitions
+   must never reference Embassy types, STM32 peripherals, `std`, or board-specific code.
+   (Supersedes the former `app-hal` crate, which dissolves in M4.)
 
 ---
 
@@ -230,12 +264,27 @@ Approximate runtime memory budget:
 
 ---
 
-## HAL Traits (`app-hal`)
+## HAL Traits (currently `app-hal`; moving to `app-core/src/hal.rs` in M4)
 
-`app-hal` defines platform-agnostic traits used by `app-core` and implemented by hardware drivers in `app-firmware`:
+`app-hal` currently defines the platform-agnostic audio traits; the new `Filesystem`
+trait is added directly in `app-core/src/hal.rs` during M4, and the existing traits
+move there at the same time ("ports in the core, adapters at the edges"):
 
 ```rust
-// Storage abstraction
+// Volume/directory abstraction (M4, planned — app-core/src/hal.rs)
+pub struct DirEntry {
+    pub name: heapless::String<64>,
+    pub is_dir: bool,
+    pub len: u64,
+}
+
+pub trait Filesystem {
+    /// Fills `out` with entries of `path`; returns how many. Caller-owned buffer
+    /// keeps it alloc-free and embedded-friendly.
+    fn read_dir(&mut self, path: &str, out: &mut [DirEntry]) -> Result<usize, FileError>;
+}
+
+// Storage abstraction (existing, moves to app-core/src/hal.rs)
 pub trait AudioFileReader {
     fn open(&mut self, path: &str)     -> Result<(), FileError>;
     fn read(&mut self, buf: &mut [u8]) -> Result<usize, FileError>;
@@ -243,7 +292,7 @@ pub trait AudioFileReader {
     fn file_len(&self)                 -> Result<u64, FileError>;
 }
 
-// Audio output abstraction
+// Audio output abstraction (existing, moves to app-core/src/hal.rs)
 pub trait AudioOutput {
     fn write_samples(&mut self, samples: &[i16]) -> Result<(), OutputError>;
     fn sample_rate(&self) -> u32;
@@ -252,16 +301,24 @@ pub trait AudioOutput {
 }
 ```
 
-Error enums (also in `app-hal/src/lib.rs`):
-- `FileError { Io, NotFound, SeekError }`
+Error enums:
+- `FileError { Io, NotFound, SeekError, NotADirectory }` (`NotADirectory` added in M4)
 - `OutputError { Overrun, Underflow }`
 
 | Implementation | Location | Description |
 |---|---|---|
+| `SdCardFilesystem` | `app-firmware/src/drivers/sd_card.rs` (planned, M9+) | `embedded-sdmmc` dir listing for embedded target |
 | `SdCardReader` | `app-firmware/src/drivers/sd_card.rs` (planned) | SDMMC file I/O for embedded target |
 | `Ak4377Output` | `app-firmware/src/drivers/audio_out.rs` (planned) | SAI + AK4377 audio output |
-| `MockFileReader` | `app-hal/src/mock.rs` (planned) | `std::fs::File` wrapper for host tests |
-| `MockAudioOutput` | `app-hal/src/mock.rs` (planned) | Captures samples into `Vec<i16>` for assertions |
+| `MockFilesystem` | `app-core/src/hal/mock.rs` (M4, planned) | In-memory tree, pure `no_std`, used by `library` unit tests |
+| `HostFilesystem` | `app-mock/src/mocks/host_fs.rs` (M4, planned) | `std::fs::read_dir` wrapper for the simulator |
+| `MockFileReader` | `app-core/src/hal/mock.rs` (planned) | In-memory file bytes for host tests |
+| `MockAudioOutput` | `app-core/src/hal/mock.rs` (planned) | Captures samples for assertions |
+
+> **SD card note:** the workspace pins `embedded-sdmmc 0.7`, whose `DirEntry` exposes a
+> `ShortFileName` (FAT 8.3) — long-filename support is version/feature dependent.
+> Prefer short-ish filenames when preparing cards, and re-check LFN support (plus the
+> 0.7→0.10 `VolumeManager` API changes) at M9 driver bringup.
 
 ---
 
@@ -304,7 +361,7 @@ Build command for firmware in CI always passes the target explicitly:
 cargo build -p app-firmware --release --target thumbv7em-none-eabihf
 ```
 
-Host tests never cross-compile:
+Host tests never cross-compile (drop `-p app-hal` once M4 dissolves the crate):
 ```bash
 cargo test -p app-hal -p app-core
 ```
@@ -325,7 +382,7 @@ pub enum Event {
 ```
 
 The `Player(Command)` / `Playback(State)` split keeps direction explicit: commands flow
-into the player actor, state changes flow out. The `EventHandler` trait unifies this:
+into the player handler, state changes flow out. The `EventHandler` trait unifies this:
 
 ```rust
 pub trait EventHandler {
@@ -336,9 +393,12 @@ pub trait EventHandler {
 }
 ```
 
-### Actor boundaries
+### Handler boundaries
 
-| Actor | Owned by | Receives | Emits |
+Handlers implement `EventHandler`; the "actor model" is the communication pattern
+(own state + message passing via event queues) they follow.
+
+| Handler | Owned by | Receives | Emits |
 |---|---|---|---|
 | **Player** | `player_task` | `Event::Player(Command::*)`, 100ms `Tick` | `Playback(State::*)`: `TrackChanged`, `Toggled`, `ProgressUpdated`, `Stopped` |
 | **Decoder** | `decode_task` (planned) | File path / seek commands from Player | `DecodeError`, buffered PCM |
@@ -348,9 +408,9 @@ pub trait EventHandler {
 ### Task bridging (app-mock, and later app-firmware)
 
 - A static `PubSubChannel<CriticalSectionRawMutex, Event, 64, 2, 2>` (`EventChannel` in
-  `app-mock/src/tasks.rs`) is shared by all tasks. Each task wraps its actor in the
+  `app-mock/src/tasks.rs`) is shared by all tasks. Each task wraps its handler in the
   generic `Task<T: EventHandler>` struct, which owns a publisher + subscriber endpoint
-  and calls `actor.handle_event()`, then publishes the resulting events.
+  and calls `handler.handle_event()`, then publishes the resulting events.
 - **player_task** selects between `subscriber.next_message()` and a 100ms `Ticker`.
   It services `Event::Player(_)` commands and injects `Command::Tick(100)` on timeout.
 - **ui_task** selects between `subscriber.next_message()` and a 33ms timeout. It
@@ -371,7 +431,7 @@ and the ui_task performs an initial `refresh_screen` before its event loop start
 
 ## Audio Pipeline (planned target state)
 
-FLAC decoding will be handled by a `Decoder` actor in `app-core` (not yet implemented — Milestone 5):
+FLAC decoding will be handled by a `Decoder` handler in `app-core` (not yet implemented — Milestone 5):
 
 ```
 SD card bytes → AudioFileReader → Decoder (Symphonia) → AudioOutput → DAC
@@ -390,9 +450,14 @@ The decoder will run in its own async task, filling a bounded PCM buffer. `Playe
 - [x] **Milestone 1** Retained-mode GUI framework (`app-core` + `app-mock`) — widget structs (`Label`, `ProgressBar`, `PlayButton`, `List`), screen composition via `Default`, `app-mock` update/sync/draw loop with keyboard navigation
 - [x] **Milestone 2** Player state machine + playlist logic (`app-core`, host-tested) — actor model with event-driven state changes, auto-advance, next/prev
 - [x] **Milestone 3** Transport controls + progress bar UI (event-driven, auto-advance) — `EventHandler` trait + `PubSubChannel` task bridging running on the real Embassy executor in `app-mock`
-- [ ] **Milestone 4** File system + playlist database — scan storage for audio files (FLAC/MP3), build a track database that populates `Playlist` from real file metadata instead of hardcoded `Track`s; mock the file system on desktop so scanning + database work end-to-end in the simulator
-- [ ] **Milestone 5** FLAC decode via Symphonia (desktop end-to-end) — `app-core/src/decoder.rs`, `app-hal` traits, host end-to-end test
-- [ ] **Milestone 6** HAL traits + mocks (`app-hal`) — traits exist; `MockFileReader`/`MockAudioOutput` still to write
+- [ ] **Milestone 4** File system + playlist database — dissolve `app-hal` (traits move to
+  `app-core/src/hal.rs`), finish the `Track` `heapless::String` ripple, add `Filesystem`
+  trait + `DirEntry` + `MockFilesystem` (in-memory, pure `no_std`), write the volume
+  scanner in `app-core/src/library.rs` (iterative DFS, extension filter, filename-derived
+  titles, `duration_ms = 0` until M5), scan `assets/music/` in the simulator via
+  `HostFilesystem` with fallback to the hardcoded playlist
+- [ ] **Milestone 5** FLAC decode via Symphonia (desktop end-to-end) — `app-core/src/decoder.rs`, real duration/tag parsing from FLAC STREAMINFO / MP3 headers, host end-to-end test
+- [ ] **Milestone 6** Audio mocks — `MockFileReader`/`MockAudioOutput` in `app-core/src/hal/mock.rs` (traits exist by then via M4)
 - [ ] **Milestone 7** Hardware bringup (STM32 boot, LED blink, RTT logs)
 - [ ] **Milestone 8** AK4377 I2C init + SAI sine wave
 - [ ] **Milestone 9** SD card reads + raw PCM playback
@@ -403,6 +468,7 @@ The decoder will run in its own async task, filling a bounded PCM buffer. `Playe
 
 ```bash
 # Host unit tests (no hardware needed)
+# (-p app-hal disappears when M4 dissolves the crate)
 cargo test -p app-hal -p app-core
 
 # Run the desktop UI simulator
