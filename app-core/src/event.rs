@@ -35,7 +35,7 @@ pub enum Command {
     Tick(u32),
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub enum State {
     TrackChanged(Option<Track>),
     Toggled(bool),
@@ -52,7 +52,7 @@ pub enum Screen {
     Change(ScreenName),
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub enum Event {
     ButtonPress(Button),
     Player(Command),

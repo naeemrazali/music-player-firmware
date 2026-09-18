@@ -104,7 +104,7 @@ impl Player {
     }
 
     fn current_track(&mut self) {
-        let track = self.playlist.current().copied();
+        let track = self.playlist.current().cloned();
         self.add_event(Event::Playback(State::TrackChanged(track)));
         self.add_event(Event::Playback(State::ProgressUpdated {
             elapsed_ms: self.elapsed_ms,
@@ -113,7 +113,7 @@ impl Player {
     }
 
     fn next_track(&mut self) {
-        let track = self.playlist.next().copied();
+        let track = self.playlist.next().cloned();
         match track {
             Some(_) => {
                 self.elapsed_ms = 0;
@@ -130,7 +130,7 @@ impl Player {
     }
 
     fn prev_track(&mut self) {
-        let track = self.playlist.prev().copied();
+        let track = self.playlist.prev().cloned();
         match track {
             Some(_) => {
                 self.elapsed_ms = 0;
