@@ -80,14 +80,14 @@ impl MainScreen {
     fn sync_new_track(&mut self, track: &Option<Track>) {
         match track {
             Some(track) => {
-                self.title.set_text(track.title);
-                self.artist.set_text(track.artist);
+                self.title.set_text(&track.title);
+                self.artist.set_text(&track.artist);
                 self.total_time
                     .set_text(core::str::from_utf8(&ui::fmt_time_ms(track.duration_ms)).unwrap());
             }
             None => {
-                self.title.set_text(Track::default().title);
-                self.artist.set_text(Track::default().artist);
+                self.title.set_text(&Track::default().title);
+                self.artist.set_text(&Track::default().artist);
                 self.elapsed_time.set_text("00:00");
                 self.total_time.set_text("00:00");
             }

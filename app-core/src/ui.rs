@@ -12,6 +12,8 @@ use embedded_graphics::{
 };
 use heapless::String;
 
+use crate::track::MAX_STRING_LENGTH;
+
 pub fn clear_background(
     display: &mut impl DrawTarget<Color = Gray8, Error = impl core::fmt::Debug>,
     color: Gray8,
@@ -20,7 +22,7 @@ pub fn clear_background(
 }
 
 pub struct Label<'a> {
-    text: String<32>,
+    text: String<MAX_STRING_LENGTH>,
     position: Point,
     style: MonoTextStyle<'a, Gray8>,
 }
@@ -36,7 +38,7 @@ impl<'a> Label<'a> {
     }
 
     pub fn new(text: &str, position: Point, style: MonoTextStyle<'a, Gray8>) -> Self {
-        let mut s = String::<32>::new();
+        let mut s = String::<MAX_STRING_LENGTH>::new();
         let _ = s.push_str(text);
         Self {
             text: s,
