@@ -11,7 +11,7 @@ The UI and player logic communicate via an **actor-model event system** using
 `heapless::Vec<Event, 8>` internal queues, formalised by the `EventHandler` trait.
 A static Embassy `PubSubChannel` bridges these queues between async tasks — this is
 no longer just planned: the desktop simulator runs the real Embassy executor
-(`arch-std`) with `ui_task` and `player_task` spawned from `#[embassy_executor::main]`,
+(`platform-std`) with `ui_task` and `player_task` spawned from `#[embassy_executor::main]`,
 so the task/channel design is validated on the host before firmware bringup. The same
 design carries over to the STM32 firmware tasks.
 
@@ -92,7 +92,7 @@ Note: `memory.x` and `.gitlab-ci.yml` are **planned but do not exist yet**.
 ```
 music-player-firmware/
 ├── Cargo.toml                      # Workspace manifest, shared dependency versions
-├── rust-toolchain.toml             # Pinned nightly toolchain (nightly-2025-07-01)
+├── rust-toolchain.toml             # Pinned nightly toolchain (nightly-2026-04-11)
 ├── memory.x                        # (planned, not yet created) linker memory regions
 ├── .cargo/
 │   └── config.toml                 # `[target.thumbv7em-none-eabihf]` runner + rustflags only
@@ -232,7 +232,7 @@ target = "thumbv7em-none-eabihf"
 ### `rust-toolchain.toml`
 ```toml
 [toolchain]
-channel    = "nightly-2025-07-01"   # update this pin periodically
+channel    = "nightly-2026-04-11"   # update this pin periodically
 targets    = ["thumbv7em-none-eabihf"]
 components = ["rust-src", "llvm-tools-preview", "rustfmt", "clippy"]
 ```
@@ -315,10 +315,10 @@ Error enums:
 | `MockFileReader` | `app-core/src/hal/mock.rs` (planned) | In-memory file bytes for host tests |
 | `MockAudioOutput` | `app-core/src/hal/mock.rs` (planned) | Captures samples for assertions |
 
-> **SD card note:** the workspace pins `embedded-sdmmc 0.7`, whose `DirEntry` exposes a
+> **SD card note:** the workspace pins `embedded-sdmmc 0.10`, whose `DirEntry` exposes a
 > `ShortFileName` (FAT 8.3) — long-filename support is version/feature dependent.
-> Prefer short-ish filenames when preparing cards, and re-check LFN support (plus the
-> 0.7→0.10 `VolumeManager` API changes) at M9 driver bringup.
+> Prefer short-ish filenames when preparing cards, and re-check LFN support and the
+> `VolumeManager` API changes at M9 driver bringup.
 
 ---
 
@@ -339,7 +339,7 @@ Error enums:
 - **SDL2 required on host:** install via your distro (e.g. `libsdl2-dev`) — the
   `embedded-graphics-simulator` window depends on it.
 - **Note:** `app-mock` runs the real Embassy executor on the host
-  (`embassy-executor` with `arch-std`, `embassy-time` with `std`), so async task code
+  (`embassy-executor` with `platform-std`, `embassy-time` with `std`), so async task code
   written here transfers directly to the firmware.
 - Run with: `cargo run -p app-mock` (from workspace root — uses host target).
 
