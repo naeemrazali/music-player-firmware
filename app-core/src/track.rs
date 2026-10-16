@@ -1,6 +1,6 @@
 use heapless::String;
 
-pub const MAX_STRING_LENGTH: usize = 64;
+pub const MAX_STRING_LENGTH: usize = 256;
 
 #[derive(Clone, Default)]
 pub struct Track {
