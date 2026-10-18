@@ -7,5 +7,5 @@ pub struct Track {
     pub title: String<MAX_STRING_LENGTH>,
     pub artist: String<MAX_STRING_LENGTH>,
     pub duration_ms: u32,
-    pub file_path: String<MAX_STRING_LENGTH>,
+    pub index: usize,
 }

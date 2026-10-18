@@ -5,7 +5,7 @@ fn track(title: &'static str, duration_ms: u32) -> Track {
         title: title.parse().unwrap(),
         artist: "Test Artist".parse().unwrap(),
         duration_ms,
-        file_path: "".parse().unwrap(),
+        index: 0usize,
     }
 }
 
