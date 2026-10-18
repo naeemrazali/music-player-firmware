@@ -9,13 +9,13 @@ pub fn new() -> Player {
         title: String::from_str("Clair de Lune").unwrap(),
         artist: String::from_str("Claude Debussy").unwrap(),
         duration_ms: 354000,
-        file_path: String::from_str("").unwrap(),
+        index: 0usize,
     });
     let _ = playlist.add(Track {
         title: String::from_str("Gymnopédie No.1").unwrap(),
         artist: String::from_str("Erik Satie").unwrap(),
         duration_ms: 210000,
-        file_path: String::from_str("").unwrap(),
+        index: 0usize,
     });
     Player::new(playlist)
 }
