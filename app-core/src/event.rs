@@ -36,8 +36,8 @@ pub enum Command {
 }
 
 #[derive(Clone)]
-pub enum State {
-    TrackChanged(Option<Track>),
+pub enum State<'a> {
+    TrackChanged(Option<&'a Track>),
     Toggled(bool),
     ProgressUpdated {
         elapsed_ms: u32,
@@ -53,9 +53,9 @@ pub enum Screen {
 }
 
 #[derive(Clone)]
-pub enum Event {
+pub enum Event<'a> {
     ButtonPress(Button),
     Player(Command),
-    Playback(State),
+    Playback(State<'a>),
     Ui(Screen),
 }
