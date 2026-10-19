@@ -1,3 +1,5 @@
+#![no_std]
+
 pub mod event;
 pub mod hal;
 pub mod player;
