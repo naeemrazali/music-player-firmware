@@ -1,3 +1,5 @@
+use alloc::boxed::Box;
+
 use crate::event::{Command, Event, EventHandler, EventQueue, State};
 use crate::playlist::Playlist;
 
@@ -104,7 +106,7 @@ impl Player {
     }
 
     fn current_track(&mut self) {
-        let track = self.playlist.current().cloned();
+        let track = self.playlist.current().cloned().map(Box::new);
         self.add_event(Event::Playback(State::TrackChanged(track)));
         self.add_event(Event::Playback(State::ProgressUpdated {
             elapsed_ms: self.elapsed_ms,
@@ -113,7 +115,7 @@ impl Player {
     }
 
     fn next_track(&mut self) {
-        let track = self.playlist.next().cloned();
+        let track = self.playlist.next().cloned().map(Box::new);
         match track {
             Some(_) => {
                 self.elapsed_ms = 0;
@@ -130,7 +132,7 @@ impl Player {
     }
 
     fn prev_track(&mut self) {
-        let track = self.playlist.prev().cloned();
+        let track = self.playlist.prev().cloned().map(Box::new);
         match track {
             Some(_) => {
                 self.elapsed_ms = 0;

@@ -1,3 +1,4 @@
+use alloc::boxed::Box;
 use embedded_graphics::mono_font::{MonoTextStyle, ascii::FONT_6X10};
 use embedded_graphics::pixelcolor::Gray8;
 use embedded_graphics::prelude::*;
@@ -77,7 +78,7 @@ impl MainScreen {
         self.play_button.draw(display);
     }
 
-    fn sync_new_track(&mut self, track: &Option<Track>) {
+    fn sync_new_track(&mut self, track: &Option<Box<Track>>) {
         match track {
             Some(track) => {
                 self.title.set_text(&track.title);

@@ -1,3 +1,5 @@
+use alloc::boxed::Box;
+
 use crate::{track::Track, ui::screen_names::ScreenName};
 
 const QUEUE_LENGTH: usize = 8;
@@ -37,7 +39,7 @@ pub enum Command {
 
 #[derive(Clone)]
 pub enum State {
-    TrackChanged(Option<Track>),
+    TrackChanged(Option<Box<Track>>),
     Toggled(bool),
     ProgressUpdated {
         elapsed_ms: u32,
