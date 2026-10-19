@@ -57,7 +57,10 @@ pub enum Screen {
 
 #[derive(Clone)]
 pub enum Fetch {
-    Playlist,
+    Playlist {
+        start_index: usize,
+        end_index: usize,
+    },
 }
 
 #[derive(Clone)]
