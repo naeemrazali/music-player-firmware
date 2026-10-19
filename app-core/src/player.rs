@@ -3,6 +3,7 @@ use alloc::boxed::Box;
 use crate::event::{Command, Event, EventHandler, EventQueue, State};
 use crate::playlist::Playlist;
 
+#[derive(Default)]
 pub struct Player {
     is_playing: bool,
     elapsed_ms: u32,
