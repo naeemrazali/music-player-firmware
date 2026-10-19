@@ -1,16 +1,16 @@
-use heapless::Vec;
+use heapless::Deque;
 
 use crate::track::Track;
 
 pub struct Playlist {
-    tracks: Vec<Track, 32>,
+    tracks: Deque<Track, 16>,
     current_index: usize,
 }
 
 impl Default for Playlist {
     fn default() -> Self {
         Self {
-            tracks: Vec::new(),
+            tracks: Deque::new(),
             current_index: 0,
         }
     }
@@ -24,7 +24,7 @@ impl Playlist {
     }
 
     pub fn add(&mut self, track: Track) -> Result<(), ()> {
-        self.tracks.push(track).map_err(|_| ())
+        self.tracks.push_back(track).map_err(|_| ())
     }
 
     pub fn current(&self) -> Option<&Track> {
