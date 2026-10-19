@@ -23,6 +23,11 @@ impl Playlist {
         }
     }
 
+    pub fn populate(&mut self, tracks: &Deque<Track, 16>) {
+        self.tracks.clear();
+        self.tracks.clone_from(tracks);
+    }
+
     pub fn add(&mut self, track: Track) -> Result<(), ()> {
         self.tracks.push_back(track).map_err(|_| ())
     }
