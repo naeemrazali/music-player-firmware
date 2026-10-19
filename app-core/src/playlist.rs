@@ -2,8 +2,10 @@ use heapless::Deque;
 
 use crate::track::Track;
 
+const MAX_TRACKS: usize = 16;
+
 pub struct Playlist {
-    tracks: Deque<Track, 16>,
+    tracks: Deque<Track, MAX_TRACKS>,
     current_index: usize,
 }
 
@@ -23,7 +25,7 @@ impl Playlist {
         }
     }
 
-    pub fn populate(&mut self, tracks: &Deque<Track, 16>) {
+    pub fn populate(&mut self, tracks: &Deque<Track, MAX_TRACKS>) {
         self.tracks.clear();
         self.tracks.clone_from(tracks);
     }
