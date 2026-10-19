@@ -4,6 +4,13 @@ use crate::track::Track;
 
 const MAX_TRACKS: usize = 16;
 
+pub enum SortOrder {
+    TitleAscending,
+    TitleDescending,
+    ArtistAscending,
+    ArtistDescending,
+}
+
 #[derive(Default, Clone)]
 pub struct Playlist {
     tracks: Deque<Track, MAX_TRACKS>,
