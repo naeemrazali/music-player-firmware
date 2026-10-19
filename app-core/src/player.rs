@@ -24,6 +24,7 @@ impl EventHandler for Player {
             Event::Player(Command::Stop) => self.stop(),
             Event::Player(Command::Toggle) => self.toggle_playback(),
             Event::Player(Command::Tick(time)) => self.tick(*time),
+            Event::Player(Command::UpdatePlaylist(playlist)) => self.update_playlist(playlist),
             _ => (),
         }
         self.push_events()
@@ -152,6 +153,10 @@ impl Player {
                 }));
             }
         }
+    }
+
+    fn update_playlist(&mut self, playlist: &Playlist) {
+        self.playlist = playlist.clone();
     }
 }
 
