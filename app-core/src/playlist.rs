@@ -4,7 +4,7 @@ use crate::track::Track;
 
 const MAX_TRACKS: usize = 16;
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Playlist {
     tracks: Deque<Track, MAX_TRACKS>,
     current_index: usize,

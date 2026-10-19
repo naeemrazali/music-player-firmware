@@ -1,6 +1,6 @@
 use alloc::boxed::Box;
 
-use crate::{track::Track, ui::screen_names::ScreenName};
+use crate::{playlist::Playlist, track::Track, ui::screen_names::ScreenName};
 
 const QUEUE_LENGTH: usize = 8;
 pub type EventQueue = heapless::Vec<Event, QUEUE_LENGTH>;
@@ -27,7 +27,7 @@ pub enum Button {
     Seek(u32),
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub enum Command {
     Toggle,
     Seek(u32),
@@ -35,6 +35,7 @@ pub enum Command {
     PreviousTrack,
     Stop,
     Tick(u32),
+    UpdatePlaylist(Box<Playlist>),
 }
 
 #[derive(Clone)]
@@ -55,9 +56,15 @@ pub enum Screen {
 }
 
 #[derive(Clone)]
+pub enum Fetch {
+    Playlist,
+}
+
+#[derive(Clone)]
 pub enum Event {
     ButtonPress(Button),
     Player(Command),
     Playback(State),
     Ui(Screen),
+    FileManager(Fetch),
 }
