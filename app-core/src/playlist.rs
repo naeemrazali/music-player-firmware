@@ -4,18 +4,10 @@ use crate::track::Track;
 
 const MAX_TRACKS: usize = 16;
 
+#[derive(Default)]
 pub struct Playlist {
     tracks: Deque<Track, MAX_TRACKS>,
     current_index: usize,
-}
-
-impl Default for Playlist {
-    fn default() -> Self {
-        Self {
-            tracks: Deque::new(),
-            current_index: 0,
-        }
-    }
 }
 
 impl Playlist {
