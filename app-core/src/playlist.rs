@@ -7,11 +7,19 @@ pub struct Playlist {
     current_index: usize,
 }
 
-impl Playlist {
-    pub fn new() -> Self {
+impl Default for Playlist {
+    fn default() -> Self {
         Self {
             tracks: Vec::new(),
             current_index: 0,
+        }
+    }
+}
+
+impl Playlist {
+    pub fn new() -> Self {
+        Self {
+            ..Default::default()
         }
     }
 
