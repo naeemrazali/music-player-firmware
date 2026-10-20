@@ -10,18 +10,21 @@ the headphones.
 
 The filesystem layer is **exfat-slim 0.7.0** (pinned, `no_std`), used directly inside
 `app-core` as the shared FS for the desktop simulator and the firmware — host and target
-differ only in their `BlockDevice` implementation. Music metadata lives in three
+differ only in their `BlockDevice` implementation. The `FileSystem` has exactly one
+owner: the `FileManager` handler inside `file_manager_task` (M4). Music metadata lives in
 on-card database files (`MUSICLIB.CAT` catalog + `MCOMP.CAT` interned-component table +
-`TITLEASC.LST` sorted view), so RAM usage is O(1) in library size and sorting never
-repeats for an unchanged card. See **SD Library & On-Card Catalog** for the full design.
+per-field sorted views `TITLEASC.LST` / `ARTISTASC.LST`), so RAM usage is O(1) in library
+size and sorting never repeats for an unchanged card. See **SD Library & On-Card
+Catalog** for the full design.
 
-The UI and player logic communicate via an **actor-model event system** using
-`heapless::Vec<Event, 8>` internal queues, formalised by the `EventHandler` trait.
-A static Embassy `PubSubChannel` bridges these queues between async tasks — this is
-no longer just planned: the desktop simulator runs the real Embassy executor
-(`platform-std`) with `ui_task` and `player_task` spawned from `#[embassy_executor::main]`,
-so the task/channel design is validated on the host before firmware bringup. The same
-design carries over to the STM32 firmware tasks.
+The UI, player, and file-access logic communicate via an **actor-model event system**
+using `heapless::Vec<Event, 8>` internal queues, formalised by the `EventHandler`
+trait. A static Embassy `PubSubChannel` bridges these queues between async tasks —
+this is no longer just planned: the desktop simulator runs the real Embassy executor
+(`platform-std`) with `ui_task` and `player_task` spawned from
+`#[embassy_executor::main]` (plus `file_manager_task` in M4), so the task/channel
+design is validated on the host before firmware bringup. The same design carries over
+to the STM32 firmware tasks.
 
 A desktop **mock** crate mirrors the embedded display using `embedded-graphics-simulator`
 so UI code can be developed and tested without hardware.
@@ -32,23 +35,36 @@ so UI code can be developed and tested without hardware.
   pattern, `EventHandler` trait, event queues), transport controls + progress bar UI,
   `app-mock` simulator running the real Embassy executor with a static `PubSubChannel`
   bridging `ui_task` / `player_task`. `app-hal` dissolved — its traits live in
-  `app-core/src/hal.rs` (1ff5737). `Track` moved from `&'static str` to `heapless::String`
-  fields, then to `{title, artist, duration_ms, file_path}` with `MAX_STRING_LENGTH = 64`
-  (6547842, 3035ad0).
-- **In flight — build currently broken:** `Track.file_index` was replaced by `file_path`
-  (3035ad0) but the ripple is unfinished — `app-mock/src/mocks/mock_player.rs` (2 compile
-  errors) and the `player/tests.rs` / `playlist/tests.rs` helpers still construct
-  `file_index`. The M4 rework below replaces all three files outright, clearing the
-  breakage and the 3 known `Playlist` clippy lints (`new_without_default`,
-  `result_unit_err`, `should_implement_trait`) with the playlist rewrite.
-- **Decided for M4 (locked design, not yet implemented):** exFAT-only storage via
-  exfat-slim 0.7.0; three on-card database files with a FNV-1a generation fingerprint
-  scanned every boot; `Track` drops `file_path` in favour of a `cat_index` pointing at
-  its `.CAT` record (string interning: the record's 16-deep `u32` chain references
-  directory/filename strings in `MCOMP.CAT`); `Playlist` becomes a `heapless::Deque<Track, 16>`
-  sliding window over the sorted view; the simulator mounts a committed gzipped exFAT
-  image in RAM and populates it through exfat-slim's own write path (CJK samples
-  included). See **SD Library & On-Card Catalog** and **Milestones**.
+  `app-core/src/hal.rs` (1ff5737). `app-core` is `no_std` with `extern crate alloc`
+  (1d28ce7). `Playlist` is a `heapless::Deque<Track, MAX_TRACKS=16>` with `current_index`
+  (2a3459a, dffeb3a). `Track` is `{title, artist: String<256>, duration_ms: u32,
+  index: usize}`. `State::TrackChanged(Option<Box<Track>>)` keeps the `Event` enum small
+  (a4dc9bf). The M4 event plumbing exists end-to-end: `Command::UpdatePlaylist(
+  Box<Playlist>)` (0cce3c2, 8b2b52b), `Event::FileManager(Fetch::Playlist { sort_order,
+  start_index, end_index })` with `SortOrder` = Title/Artist × Asc/Desc (a5f23d2,
+  3c230fa), and a `FileManager` handler skeleton in `app-core/src/file_manager.rs`
+  (3e45ab6) — `fetch_playlist`/`fetch_track`/`get_list_filename` are stubs.
+- **In flight — branch `sorted-list-implementation`, build currently broken:** work on
+  the M4 fetch path is under way (stages in **Milestones**). The only compile error is
+  `file_manager.rs:48` — `get_list_filename(sort_order) -> string` names the `string`
+  module instead of a type (E0573); Stage 0 fixes it (`-> &'static str`).
+- **Decided for M4 (locked design, being implemented):** exFAT-only storage via
+  exfat-slim 0.7.0 with `default-features = false` (no alloc, no logging, **no embassy**
+  — the crate's built-in fs actor was evaluated and rejected; see *exfat-slim notes*).
+  **`file_manager_task` is the FS actor**: its `FileManager` handler is the sole owner
+  of the raw `exfat_slim::asynchronous::FileSystem`, so "streaming a music file while
+  opening a sorted list" is one task interleaving at await points — no FS sharing, no
+  locks. `EventHandler` gains `async fn handle_event_async` (default = the sync
+  `handle_event`). On-card database files with an FNV-1a generation fingerprint scanned
+  every boot; `Track.index` becomes `cat_index: u32` pointing at its `.CAT` record
+  (string interning: the record's 16-deep `u32` chain references directory/filename
+  strings in `MCOMP.CAT`). The `Playlist` window is externally driven: `Player` emits
+  `Fetch::Playlist`, `file_manager_task` awaits `fetch_window(order, start, end)` and
+  publishes `UpdatePlaylist`; `Player` splices on apply and prefetches near the window
+  edge (boot fetch `[0,16)` + in-playback prefetch). The simulator mounts a committed
+  gzipped exFAT image in RAM and populates it through exfat-slim's own write path (CJK
+  samples included). See **SD Library & On-Card Catalog**, **Event Architecture**, and
+  **Milestones**.
 - **Not started:** Symphonia decoding (`app-core/src/decoder.rs`), `memory.x`, CI pipeline,
   and all hardware bringup (the `app-firmware` crate is still a hello-world placeholder
   with no dependencies and does not yet build for the embedded target).
@@ -110,29 +126,37 @@ music-player-firmware/
 │   └── make_exfat_image.sh          # (M4, planned) one-time: mkfs.exfat a small volume,
 │                                   #   gzip it → app-mock/assets/exfat.img.gz
 │
-├── app-core/                       # Pure business logic — no hardware, no_std-ready
+├── app-core/                       # Pure business logic — no hardware, no_std + alloc
 │   └── src/
-│       ├── lib.rs                  # Module declarations
-│       ├── event.rs                # Button, Command, State, Screen, Event enums +
-│       │                           #   EventHandler trait, EventQueue type
+│       ├── lib.rs                  # Module declarations (#![no_std], extern crate alloc)
+│       ├── event.rs                # Button, Command, State, Screen, Fetch, Event enums +
+│       │                           #   EventHandler trait (+ M4: handle_event_async),
+│       │                           #   EventQueue type
 │       ├── player.rs               # Player handler — implements EventHandler, owns state
 │       ├── player/
 │       │   └── tests.rs            # Player pure-logic tests (submodule pattern)
-│       ├── playlist.rs             # (M4 rewrite) Deque<Track,16> window over the Library
+│       ├── playlist.rs             # Deque<Track,16> + current_index today; (M4) gains
+│       │                           #   window_start + splice methods (window is fed
+│       │                           #   externally by file_manager_task)
 │       ├── playlist/
 │       │   └── tests.rs           # Playlist pure-logic tests
-│       ├── track.rs                # (M4 target) {title: String<256>, artist: String<256>,
-│       │                           #   duration_ms: u32, cat_index: u32} — no path field
+│       ├── track.rs                # {title, artist: String<256>, duration_ms: u32,
+│       │                           #   index: usize}; (M4) index → cat_index: u32
+│       ├── file_manager.rs         # FileManager handler (skeleton) — (M4) sole owner
+│       │                           #   of the raw FileSystem; fetch_playlist /
+│       │                           #   fetch_track / get_list_filename
 │       ├── hal.rs                  # AudioFileReader, AudioOutput traits + error enums
 │       │                           #   (M4 decision: NO Filesystem trait — exfat-slim IS
 │       │                           #    the shared FS layer, used directly in library.rs)
 │       ├── library.rs              # (M4, planned) SortOrder, FNV-1a fingerprint DFS,
 │       │                           #   catalog/MCOMP rebuild, LST load-or-build,
-│       │                           #   two-level entry(logical_i)
+│       │                           #   fetch_window(order, start, end) — raw async API,
+│       │                           #   fns take &mut FileSystem
 │       ├── library/
 │       │   └── tests.rs            # Pure-logic tests: record/table/header codecs, FNV
 │       │                           #   vectors, title derivation, extension filter,
-│       │                           #   duration estimator, SortOrder comparator
+│       │                           #   duration estimator, SortOrder comparator,
+│       │                           #   chain→path reconstruction
 │       └── ui/
 │           ├── ui.rs               # Widgets live here: Label, ProgressBar, PlayButton,
 │           │                       #   HorizontalLine, List, clear_background, fmt_time_ms
@@ -160,26 +184,38 @@ music-player-firmware/
     │                               #   at startup — CJK-named samples included
     └── src/
         ├── main.rs                 # #[embassy_executor::main], static PubSubChannel,
-        │                           #   spawns ui_task + player_task
+        │                           #   spawns ui_task + player_task + (M4)
+        │                           #   file_manager_task — spawn order matters, see
+        │                           #   Event Architecture
         ├── tasks.rs                # Task<T: EventHandler> struct (owns handler + pub/sub
-        │                           #   endpoints), EventChannel type aliases
+        │                           #   endpoints; M4: awaits handle_event_async),
+        │                           #   EventChannel (M4: 3 pub / 3 sub)
         ├── tasks/
-        │   ├── player_task.rs      # Player task — mounts image+Library+Playlist+Player,
-        │   │                       #   services Player commands + 100ms tick
-        │   └── ui_task.rs          # UI task — keyboard input, screen refresh loop
+        │   ├── player_task.rs      # Player task — services Player commands + 100ms tick;
+        │   │                       #   (M4) Player::new(empty Playlist), windows arrive
+        │   │                       #   via UpdatePlaylist
+        │   ├── ui_task.rs          # UI task — keyboard input, screen refresh loop
+        │   └── file_manager_task.rs # (M4, planned) THE FS ACTOR TASK — constructs the
+        │                           #   device + FileSystem, mount → Library::open_or_build
+        │                           #   → boot fetch [0,16) → publish → loop on
+        │                           #   Event::FileManager(_)
         ├── mocks.rs                # mock_display, mock_window, mock_player constructors
         ├── mocks/
         │   ├── mock_display.rs
-        │   ├── mock_player.rs      # (M4 rewrite) image→populate→Library→Playlist→Player
-        │   └── sd_image.rs         # (M4, planned) ExFatRamBlockDevice (gunzip→Vec, impl
-        │                           #   exfat-slim BlockDevice<512>) + populate_from_dir()
-        │                           #   via exfat-slim create_directory/write
+        │   ├── mock_player.rs      # (M4) synthetic 2-track fallback when assets are
+        │   │                       #   missing; the real library comes from the RAM
+        │   │                       #   image via file_manager_task
+        │   └── sd_image.rs         # (M4, planned) ExFatRamBlockDevice (gunzip→Vec,
+        │                           #   impl async BlockDevice<512>, Align = A4) +
+        │                           #   populate_from_dir() via exfat-slim
+        │                           #   create_directory/write
         └── tests/                   # (M4, planned) behavioral suite, #[cfg(test)] — the
                                     #   image tooling is simulator-only, so all tests that
                                     #   need a mounted volume live here: scan→CAT, LST
-                                    #   ordering, fingerprint change/stale, interning
-                                    #   dedup, chain→path reconstruction, window slides,
-                                    #   player e2e, reopen-by-CJK-path
+                                    #   ordering (asc + desc), fingerprint change/stale,
+                                    #   interning dedup, chain→path reconstruction, window
+                                    #   slides, player e2e with prefetch during playback,
+                                    #   reopen-by-CJK-path
 ```
 
 ---
@@ -224,9 +260,16 @@ music-player-firmware/
    image tooling is simulator-only, and `app-core` must never depend on
    `app-mock`.
 
-9. **exfat-slim is the shared FS layer, used directly in `app-core`; `BlockDevice`
-   adapters live at the edges.** `library.rs` calls exfat-slim's path-based API
-   (`open`, `read_dir`, `create_directory`, `write`, `seek`). `app-mock` supplies
+9. **exfat-slim is the shared FS layer, used directly in `app-core`; the `FileSystem`
+   has exactly one owner; `BlockDevice` adapters live at the edges.** Every exfat-slim
+   file operation takes `&mut FileSystem` (`File::read(&mut self, fs, buf)`, `seek`,
+   `write`), so single ownership is enforced by the type system: the `FileManager`
+   handler (`app-core/src/file_manager.rs`) owns the raw
+   `exfat_slim::asynchronous::FileSystem` and **`file_manager_task` is the FS actor** —
+   no other task touches the FS. `library.rs` calls the raw async API (`open` with
+   `OpenOptions`, `File::read/seek/write` taking `&mut FileSystem`, `read_dir` with a
+   caller-supplied 765B name buffer). The crate's `embassy` feature (internal
+   request-queue actor) is **rejected** — see *exfat-slim notes*. `app-mock` supplies
    `ExFatRamBlockDevice` (gunzipped committed image); `app-firmware` supplies the
    embassy-stm32 SDMMC adapter **plus MBR partition-offset translation** (exfat-slim
    mounts at view-sector 0; real SDXC cards carry an MBR with a type-0x07 exFAT
@@ -235,9 +278,22 @@ music-player-firmware/
    (Supersedes the earlier embedded-sdmmc/FAT32 plan and the `Filesystem` trait.)
 
 10. **The on-card database files are private formats; the fingerprint is the glue.**
-    Any byte layout change to `MUSICLIB.CAT` / `MCOMP.CAT` / `TITLEASC.LST` bumps its
-    `version` field (old files auto-rebuild). All three files of one generation share
+    Any byte layout change to `MUSICLIB.CAT` / `MCOMP.CAT` / the `*.LST` views bumps its
+    `version` field (old files auto-rebuild). All files of one generation share
     one fingerprint; never mix generations.
+
+11. **`handle_event_async` is the async entry point; sync `handle_event` is the
+    default.** Handlers needing `await` (FileManager's FS reads today, the M5 Decoder
+    later) override `async fn handle_event_async`; `Task::service_event` awaits it.
+    Native async-fn-in-trait (AFIT) is fine on the pinned nightly and in `no_std`
+    (exfat-slim itself uses AFIT for its `BlockDevice` trait). Handlers without async
+    needs (Player, screens) inherit the default that delegates to the sync method.
+
+12. **All card reads route through `file_manager_task` — including the decoder's.**
+    The M5 decode task streams its music file by requesting reads from the FS actor
+    task; it never owns the `FileSystem`, and the `FileSystem` is never shared behind a
+    mutex or moved between tasks. The request mechanism (zero-copy lending channel vs
+    event-based chunks) is decided at M5; the constraint is fixed now.
 
 ---
 
@@ -280,11 +336,17 @@ All crates use **`edition = "2024"`** (stabilised in Rust 1.85, February 2025).
 
 ### Key dependency notes (M4)
 - `exfat-slim = "0.7"` — pinned pre-1.0, single-author crate; accepted risk
-  (see *SD Library & On-Card Catalog* → *exfat-slim notes*). `default = []`
-  (no logging, no alloc, no embassy); features exist: `alloc`, `defmt`, `embassy`
-  (fs actor task — candidate for M5+), `log`.
+  (see *SD Library & On-Card Catalog* → *exfat-slim notes*). `default = []` and it
+  stays that way: no logging, no alloc, no embassy. The `embassy` feature
+  (crate-internal request-queue actor: `fs_actor_task` + `FileHandle` client API;
+  implies `alloc`, `Vec`-per-read copies) was **evaluated and rejected** —
+  `file_manager_task` owns the raw `FileSystem` instead (rule 9). With all features
+  off the dep tree is `aligned`, `bitflags`, `block-device-driver`, `byteorder`,
+  `exfat-slim-macros`, `heapless`, `thiserror` — all `no_std`, zero `embassy-*`
+  crates in `app-core`.
 - `miniz_oxide` in `app-mock` only — gunzips `assets/exfat.img.gz` at startup.
-- The old `embedded-sdmmc` workspace pin is removed (superseded by the exFAT decision).
+- The unused `embedded-sdmmc` workspace pin is removed in M4 Stage 0 (still present in
+  the manifest today, referenced by no crate).
 
 ---
 
@@ -306,20 +368,22 @@ Approximate runtime memory budget:
 | AXISRAM | Symphonia heap (`embedded-alloc`) | 64KB |
 | AXISRAM | PCM double-buffer (DMA) | ~32KB |
 | DTCM | Embassy + task stacks | ~64KB |
-| AXISRAM | `Library` state + `Deque<Track,16>` window (16 × ~520B) | ~9KB |
+| AXISRAM | `FileManager`/`Library` state + `FileSystem` slot cache (N=8 × 512B) + `Deque<Track,16>` window (16 × ~520B) | ~13KB |
 | AXISRAM | LST build sort buffer `Vec<Track, CAP=256>` (~520B/entry) | ~148KB, boot-transient only |
-| AXISRAM | DFS walk buffers (765B name buf, ~4KB path prefix) | ~5KB, boot-transient only |
+| AXISRAM | DFS walk buffers (765B name buf, ~4KB path prefix, on the file_manager_task stack) | ~5KB, boot-transient only |
 
-The static `PubSubChannel<Event, 64>` also shrinks ~32KB on firmware once `Track`
-drops its path field (Event enum size falls ~512B/slot).
+The static `PubSubChannel<Event, 64>` stays small: `State::TrackChanged(Option<Box<Track>>)`
+and `Command::UpdatePlaylist(Box<Playlist>)` box the big payloads, so each slot is a few
+dozen bytes.
 
 ---
 
 ## SD Library & On-Card Catalog (M4 design — locked)
 
 RAM usage is O(1) in library size: the sorted lists live **on the SD card**; the
-in-memory `Library` is a ~40-byte accessor. Three private files in the volume root,
-all rebuilt together (one fingerprint, one generation):
+in-memory `Library` is a ~40-byte accessor. Four private files in the volume root
+(`MUSICLIB.CAT`, `MCOMP.CAT`, `TITLEASC.LST`, `ARTISTASC.LST`), all rebuilt together
+(one fingerprint, one generation):
 
 ### `/MUSICLIB.CAT` — unsorted catalog (scan order)
 
@@ -346,13 +410,17 @@ name has no NUL (decode = bytes up to first NUL, else all 765). Directory intern
 free during the rebuild DFS (each directory is visited exactly once — index assigned on
 entry); filename entries are appended one per file (~unique anyway).
 
-### `/TITLEASC.LST` — sorted view (u32 catalog indices)
+### `/TITLEASC.LST` + `/ARTISTASC.LST` — sorted views (u32 catalog indices)
 
-Header **24 B**: `magic "MLST"` | version | order (u32 LE, `SortOrder` discriminant:
-0 = NameAsc, 1 = NameDesc) | count (== CAT count) | fingerprint (== CAT's).
-Body: `count × u32 LE` — `LST[i]` = catalog index of logical position *i*; file
-length `24 + count×4`. `SortOrder::NameDesc` = **reverse iteration of the same file**
-(no second LST). Future orders (M5+: `ARTISTASC.LST` etc.) share this layout.
+One file per sort field, header **24 B** each: `magic "MLST"` | version | order
+(u32 LE, canonical base order of the file: 0 = TitleAsc, 1 = ArtistAsc) | count
+(== CAT count) | fingerprint (== CAT's). Body: `count × u32 LE` — `LST[i]` = catalog
+index of logical position *i*; file length `24 + count×4`. `SortOrder` has four
+variants (Title/Artist × Asc/Desc) but only two files exist: **Descending = reverse
+iteration of the same file** (`ArtistDescending` reads `ARTISTASC[count-1-i]`, no
+second LST). `get_list_filename(SortOrder)` maps every variant to its base file +
+direction. Artist order is degenerate until M5 tag parsing fills real `artist`
+fields (all `""` ⇒ stable catalog order) — accepted. Future orders share this layout.
 
 ### Fingerprint & lifecycle
 
@@ -368,38 +436,77 @@ length `24 + count×4`. `SortOrder::NameDesc` = **reverse iteration of the same 
 - **Skip policies** (`skipped_count` in the CAT header): chains deeper than 16
   components; reconstructed paths exceeding the ~4KB path budget (bounds the M5 reopen
   buffer). Component names can never overflow (765 B is the format max).
-- **Access**: `Library::entry(logical_i)` = read `LST[i]` (4 B at `24+i×4`) → read
-  `CAT[idx]` (580 B at `24+idx×580`) → hydrate `Track` — two fixed-offset reads, both
-  riding exfat-slim's slot cache.
+- **Access**: `library::fetch_window(order, start, end)` = open LST → seek to
+  `24+i×4` (reverse mapping for Descending) → read `(end-start)` indices → for each,
+  seek to `24+idx×580` and read the 580 B CAT record → hydrate `Track` — fixed-offset
+  reads riding exfat-slim's slot cache, awaited inside `file_manager_task`.
 - **Reopen (M5)**: record → ≤16 MCOMP reads → reconstruct `"/Music/日本語/曲.flac"` →
-  `fs.open(path)` — once per song.
+  open **via a request to `file_manager_task`** (sole FS owner, rule 12) — once per song.
 - **`Track` (RAM)**: `{title: String<256>, artist: String<256>, duration_ms: u32,
   cat_index: u32}` (~520 B). The path exists only as the on-card chain.
 
-### Playlist window
+### Playlist window (externally driven — M4 decision)
 
-`Playlist` owns `Library` + `heapless::Deque<Track, 16>` + absolute logical
-`window_start`/`current_index`. `next()`/`prev()` preserve the current semantics
-(clamp at start; `None` at end ⇒ Player stops) and slide the deque at the edges —
-one pop + one two-level read per step. `MAX_STRING_LENGTH = 256` drives
-title/artist/`Label`.
+The FS reads do **not** live in `Playlist`; the window is fed over the event channel.
+`Playlist` = `heapless::Deque<Track, MAX_TRACKS=16>` + absolute logical
+`window_start` + relative `current_index` (absolute current = `window_start +
+current_index`). `MAX_STRING_LENGTH = 256` drives title/artist/`Label`.
+
+- **Fetch protocol**: `Player` emits `Event::FileManager(Fetch::Playlist { sort_order,
+  start_index, end_index })`; `file_manager_task` awaits
+  `fetch_window(order, start, end)` and publishes
+  `Event::Player(Command::UpdatePlaylist(Box<Playlist>))`.
+- **Boot**: `file_manager_task` performs the initial fetch `[0, 16)` itself at startup
+  (default `TitleAscending`) before entering its event loop. `Player::new(empty)`
+  starts idle — `TrackChanged(None)` + `Toggled(true)` seed the UI; playback begins
+  when the first window arrives.
+- **Prefetch during playback**: when `current_index + 2 >= window len`, `Player`
+  emits `Fetch::Playlist { start: window_end, end: window_end + 16 }` behind a
+  `fetch_in_flight` guard (2 tracks of slack ≫ the ~16 × (4 B + 580 B) fetch cost).
+  This is the "sorted list opens *while a music file is streaming*" case: with M5
+  decode, `file_manager_task` interleaves window fetches and the decoder's chunk
+  reads at await points — one owner, no locks.
+- **Apply**: `UpdatePlaylist` splices when contiguous (drop the consumed head, append
+  the fetched tail, advance `window_start`) and replaces wholesale on a sort-order
+  change (keep the current track if present in the new window, else stop).
+- **End of library**: `fetch_window` clamps past-the-end ranges; when the window truly
+  exhausts, `next()` → `None` ⇒ `Player::stop()` (existing semantics preserved).
 
 ### exfat-slim notes (verified against 0.7.0 source)
 
 - Path-based API (`open`, `read_dir`, `create_directory`, `write`, `exists`, `remove_file`,
   `rename`), blocking and async from one source; `OpenOptions` with
   create/truncate/append; `seek(u64)`; full **write** support.
+- **Single-owner API shape**: every `File` op takes `&mut FileSystem`
+  (`File::read(&mut self, fs, buf)`, `seek`, `write`, `flush`) — a `File` handle alone
+  is inert; two tasks cannot each hold working files. Multiple files may be open at
+  once under one owner, interleaving at await points. This is why `file_manager_task`
+  owns the FS (rules 9/12) and why "streaming a music file while opening the sorted
+  list" just works.
+- `read_dir` yields `DirectoryEntry { metadata, name }` with `metadata.len()` — the
+  fingerprint walk and duration estimator get file sizes from directory iteration,
+  no per-file opens needed.
+- The `embassy` feature exposes the FS through a crate-internal actor (`fs_actor_task`,
+  static `Channel<Req, 8>`, `REPLY_SLOTS = 4`, `FileHandle` client API, BTreeMap
+  handle table). **Rejected**: it implies `alloc`, allocates a `Vec` per
+  `FileHandle::read` (copy + churn on the 64KB firmware heap), and duplicates the
+  actor pattern our event system already provides.
 - Names are UTF-16LE on disk, decoded to UTF-8 with a caller-supplied buffer
   (`MAX_NAME_LEN = 765`) — CJK-native, one canonical name per file (no FAT LFN/SFN
   duality; the earlier SFN-path reopen-key design is obsolete).
 - `no_std`, `deny(unsafe_code)`, allocator optional; core paths we use are alloc-free.
+- The async `BlockDevice` trait (re-exported from `block-device-driver`, native AFIT)
+  has `type Align: aligned::Alignment`; the crate's own in-memory example device uses
+  `BLOCK_SIZE = 512`, slot cache `N = 4`, `type Align = A4` — `ExFatRamBlockDevice`
+  mirrors this (we pick `N = 8` for headroom).
 - `mount()` expects the exFAT boot sector at view-sector 0 — adapters must apply the
   MBR partition LBA themselves.
 - Known TODOs (accepted risks): reads past `valid_data_length` don't zero-fill (our
-  reads are always exact-offset/exact-length); no double-open file locking (single-task
-  FS ownership in M4 makes it moot). Mitigations: pinned version, FS layer isolated in
-  `library.rs`, the app-mock behavioral suite, and a documented swap path back to
-  embedded-sdmmc if the crate disappoints.
+  reads are always exact-offset/exact-length); no double-open file locking (single
+  ownership in `file_manager_task` makes it moot — re-verify when M5 decoder reads
+  interleave in the same task). Mitigations: pinned version, FS layer isolated in
+  `library.rs`/`file_manager.rs`, the app-mock behavioral suite, and a documented swap
+  path back to embedded-sdmmc if the crate disappoints.
 
 ### Simulator image strategy
 
@@ -467,23 +574,34 @@ All inter-module communication uses a unified `Event` enum:
 ```rust
 pub enum Event {
     ButtonPress(Button),            // Input layer (SDL2 / GPIO)
-    Player(Command),                // Commands TO the Player (Toggle, Seek, NextTrack, …)
+    Player(Command),                // Commands TO the Player (Toggle, Seek, NextTrack,
+                                    //   UpdatePlaylist, …)
     Playback(State),                // State changes FROM the Player (TrackChanged, …)
     Ui(Screen),                     // Screen transitions, refresh requests
+    FileManager(Fetch),             // Read requests TO the file manager (Fetch::Playlist
+                                    //   { sort_order, start_index, end_index }, …)
 }
 ```
 
 The `Player(Command)` / `Playback(State)` split keeps direction explicit: commands flow
-into the player handler, state changes flow out. The `EventHandler` trait unifies this:
+into the player handler, state changes flow out; `FileManager(Fetch)` is the same idea
+for card reads. The `EventHandler` trait unifies this:
 
 ```rust
 pub trait EventHandler {
     fn event_queue(&mut self) -> &mut EventQueue;
     fn handle_event(&mut self, event: &Event) -> EventQueue;
+    async fn handle_event_async(&mut self, event: &Event) -> EventQueue {  // (M4)
+        self.handle_event(event)                                        // default: sync path
+    }
     fn push_events(&mut self) -> EventQueue;  // drains the internal queue
     fn add_event(&mut self, event: Event);
 }
 ```
+
+`Task::service_event` awaits `handle_event_async` (M4). Handlers with no async needs
+(Player, screens) inherit the default; `FileManager` overrides it for its FS reads
+(rule 11).
 
 ### Handler boundaries
 
@@ -492,33 +610,49 @@ Handlers implement `EventHandler`; the "actor model" is the communication patter
 
 | Handler | Owned by | Receives | Emits |
 |---|---|---|---|
-| **Player** | `player_task` | `Event::Player(Command::*)`, 100ms `Tick` | `Playback(State::*)`: `TrackChanged`, `Toggled`, `ProgressUpdated`, `Stopped` |
-| **Decoder** | `decode_task` (planned) | `cat_index` / seek commands from Player; reopens via chain→MCOMP→path | `DecodeError`, buffered PCM |
+| **Player** | `player_task` | `Event::Player(Command::*)` incl. `UpdatePlaylist`, 100ms `Tick` | `Playback(State::*)`: `TrackChanged`, `Toggled`, `ProgressUpdated`, `Stopped`; `FileManager(Fetch::Playlist)` prefetch near the window edge |
+| **FileManager** | `file_manager_task` | `Event::FileManager(Fetch::*)` | `Player(Command::UpdatePlaylist)` — **sole owner of the exFAT `FileSystem`** |
+| **Decoder** | `decode_task` (M5) | `cat_index` / seek commands from Player; streams its file **via `file_manager_task`** (mechanism TBD at M5) | `DecodeError`, buffered PCM |
 | **Active Screen** | `ui_task` | `ButtonPress`, `Playback(State::*)` | `Player` commands, `Ui(Refresh)`, `Ui(Change)` |
 | **ScreenManager** | `ui_task` | `Ui(Change)` | Routes events to active screen |
 
 ### Task bridging (app-mock, and later app-firmware)
 
-- A static `PubSubChannel<CriticalSectionRawMutex, Event, 64, 2, 2>` (`EventChannel` in
-  `app-mock/src/tasks.rs`) is shared by all tasks. Each task wraps its handler in the
-  generic `Task<T: EventHandler>` struct, which owns a publisher + subscriber endpoint
-  and calls `handler.handle_event()`, then publishes the resulting events.
+- A static `PubSubChannel<CriticalSectionRawMutex, Event, 64, 3, 3>` (`EventChannel` in
+  `app-mock/src/tasks.rs`; counts 2→3 in M4 when `file_manager_task` joins) is shared
+  by all tasks. Each task wraps its handler in the generic `Task<T: EventHandler>`
+  struct, which owns a publisher + subscriber endpoint, awaits
+  `handler.handle_event_async()`, then publishes the resulting events.
 - **player_task** selects between `subscriber.next_message()` and a 100ms `Ticker`.
   It services `Event::Player(_)` commands and injects `Command::Tick(100)` on timeout.
+  It publishes everything its handler emits — including `FileManager(Fetch::Playlist)`
+  prefetch requests.
 - **ui_task** selects between `subscriber.next_message()` and a 33ms timeout. It
   services `Playback(_)` state changes (which schedule `Screen::Refresh`) and
   `Ui(Screen::Change)`, and polls SDL2 for keyboard input on timeout.
+- **file_manager_task** (M4, the FS actor): at startup it constructs
+  `FileSystem::new(ExFatRamBlockDevice)` → `mount()` → `Library::open_or_build()`
+  (boot scan) → boot fetch `[0, 16)` → publishes `UpdatePlaylist`; then it loops on
+  `subscriber.next_message()` servicing `Event::FileManager(_)`. It never touches the
+  `Event::Player(_)` / `Playback(_)` traffic.
+- **Spawn order matters (M4):** `ui_task` → `player_task` → `file_manager_task`.
+  Embassy pubsub drops messages published before a subscriber joins, and `Task::new`
+  subscribes synchronously at task start, so earlier-spawned tasks are guaranteed
+  subscribed before `file_manager_task`'s first publish (its boot scan awaits, which
+  yields to them first). Document this in `main.rs`.
 - **Event echo control:** each task filters which channel messages it services, so
   events published by a task are not re-processed by it (no infinite loops).
 
 ### Initialization
 
-`Player::new(playlist)` seeds the initial state: it emits `TrackChanged`,
-`Toggled(true)`, and `ProgressUpdated` events into its internal queue at construction,
-bootstrapping the first UI draw without a special-case initial-sync path. In the
-simulator, `mock_player::new()` builds the RAM exFAT image (or the synthetic fallback),
-mounts the `Library`, opens the `Playlist`, constructs the `Player`, and the ui_task
-performs an initial `refresh_screen` before its event loop starts.
+`Player::new(playlist)` emits `TrackChanged`, `Toggled(true)`, and `ProgressUpdated`
+events into its internal queue at construction, bootstrapping the first UI draw
+without a special-case initial-sync path. In M4 the constructor is called with an
+**empty** `Playlist`: the emitted `TrackChanged(None)` seeds the UI while
+`file_manager_task` mounts, scans, fetches the first window `[0, 16)`, and publishes
+`UpdatePlaylist` — playback of track 0 begins on arrival. The ui_task performs an
+initial `refresh_screen` before its event loop starts. (Until M4 lands,
+`mock_player::new()` still seeds a hardcoded 2-track playlist.)
 
 ---
 
@@ -531,11 +665,17 @@ SD card bytes → AudioFileReader → Decoder (Symphonia) → AudioOutput → DA
 ```
 
 `Decoder` is platform-agnostic. It reopens a track via `Track.cat_index` → `.CAT`
-chain → `MCOMP.CAT` entries → reconstructed path → exfat-slim `open()`, then reads
-through the `AudioFileReader` port and writes PCM through `AudioOutput`. On the host,
-both sides are mocked. On the STM32, the exFAT block device and `Ak4377Output` provide
-real I/O. Duration/tag parsing at M5 also fills real `title`/`artist`/`duration_ms`
-into the catalog records (replacing filename-derived values and size-based estimates).
+chain → `MCOMP.CAT` entries → reconstructed path, then streams the file **through
+`file_manager_task`** (sole FS owner, rule 12 — the decoder never owns the
+`FileSystem` itself). The request mechanism is decided at M5: leading candidate is a
+zero-copy lending channel (decoder lends `&'static mut [u8]` buffers that the file
+manager fills via `File::read`); the fallback is event-based chunk requests. The
+`AudioFileReader`/`AudioOutput` ports in `hal.rs` remain the decoder's I/O boundary —
+how the reader is backed (a file_manager-backed implementation vs a mock) is an M5
+detail. On the host, both sides are mocked. On the STM32, the exFAT block device and
+`Ak4377Output` provide real I/O. Duration/tag parsing at M5 also fills real
+`title`/`artist`/`duration_ms` into the catalog records (replacing filename-derived
+values and size-based estimates).
 
 The decoder will run in its own async task, filling a bounded PCM buffer. `Player` will
 consume samples from this buffer each `tick()`, advancing `elapsed_ms` based on actual
@@ -553,21 +693,39 @@ sample consumption rather than a simulated timer.
 - [x] **Milestone 2** Player state machine + playlist logic (`app-core`, host-tested) — actor model with event-driven state changes, auto-advance, next/prev
 - [x] **Milestone 3** Transport controls + progress bar UI (event-driven, auto-advance) — `EventHandler` trait + `PubSubChannel` task bridging running on the real Embassy executor in `app-mock`
 - [ ] **Milestone 4** SD library + playlist database (exFAT, locked design — see
-  **SD Library & On-Card Catalog**):
-  - `track.rs`: `MAX_STRING_LENGTH` 64→256; `Track` → `{title, artist, duration_ms,
-    cat_index}` (`file_path` removed; fixes the current broken build and the 3 known
-    `Playlist` clippy lints)
-  - `app-core/src/library.rs`: `SortOrder`, FNV-1a fingerprint DFS, streaming CAT+MCOMP
-    rebuild, lazy fingerprint-bound LST build, two-level `entry(logical_i)`
-  - `app-core/src/playlist.rs` rewrite: `Deque<Track, 16>` window (probe non-`Copy`
-    support first; `Vec`+rotate fallback)
-  - `app-mock`: `sd_image.rs` (gunzip + `ExFatRamBlockDevice` + `populate_from_dir`
-    via exfat-slim writes), committed `assets/exfat.img.gz` +
-    `tools/make_exfat_image.sh`, CJK sample assets, `player_task` wiring
-  - Tests: pure-logic in `app-core` (codecs, FNV, derivations, comparator);
-    behavioral suite in `app-mock` (scan→CAT, LST, fingerprint change/stale, interning
-    dedup, chain→path reconstruction, window slides, player e2e, reopen-by-CJK-path)
-- [ ] **Milestone 5** FLAC decode via Symphonia (desktop end-to-end) — `app-core/src/decoder.rs`, real duration/tag parsing from FLAC STREAMINFO / MP3 headers written back into catalog records, reopen-by-chain, host end-to-end test
+  **SD Library & On-Card Catalog**; in progress on branch `sorted-list-implementation`).
+  Landed already: `Deque<Track,16>` playlist, `MAX_STRING_LENGTH = 256`,
+  `Fetch::Playlist`/`UpdatePlaylist` event plumbing, `FileManager` handler skeleton,
+  4-variant `SortOrder`. Remaining work (stages, in order):
+  - **Stage 0 — unbreak build + deps:** `get_list_filename -> &'static str` (fixes
+    E0573 at `file_manager.rs:48`); workspace gains `exfat-slim 0.7`
+    (`default-features = false`) and `miniz_oxide` (app-mock); drop the unused
+    `embedded-sdmmc` pin
+  - **Stage 1 — async trait:** `EventHandler::handle_event_async` (default = sync);
+    `Task::service_event` awaits it; `EventChannel` counts 2→3 pub / 3 sub
+  - **Stage 2 — track/playlist/player:** `Track.index: usize` → `cat_index: u32`;
+    `Playlist.window_start` + splice methods; `Player` window logic (empty at boot,
+    prefetch emit at `current_index + 2 >= len` behind a `fetch_in_flight` guard,
+    splice-or-replace on `UpdatePlaylist`); update `mock_player.rs` +
+    player/playlist tests
+  - **Stage 3 — `app-core/src/library.rs`:** pure codecs (24B headers, 580B CAT
+    record, 765B MCOMP entry, FNV-1a, stem derivation, extension filter, duration
+    estimator, SortOrder comparator, chain→path) + async fns taking
+    `&mut FileSystem` (boot scan: iterative DFS, streaming CAT/MCOMP rebuild, LST
+    load-or-build; `fetch_window(order, start, end)`)
+  - **Stage 4 — `FileManager` + task:** `FileManager<B: BlockDevice<512>, N>` owns
+    `FileSystem<B, 512, 8>`; `handle_event_async` services `Fetch::Playlist`;
+    `file_manager_task`: mount → `Library::open_or_build` → boot fetch `[0,16)` →
+    loop; spawn order ui → player → file_manager (see **Event Architecture**)
+  - **Stage 5 — sim plumbing:** `tools/make_exfat_image.sh` +
+    `assets/exfat.img.gz`; `sd_image.rs` `ExFatRamBlockDevice` (miniz_oxide gunzip,
+    async `BlockDevice<512>`, `Align = A4`, volume at view-sector 0) +
+    `populate_from_dir` (CJK samples) + synthetic 2-track fallback
+  - **Stage 6 — tests:** pure-logic in `app-core/src/library/tests.rs` (codecs, FNV,
+    derivations, comparator, chain→path); behavioral suite in `app-mock/src/tests/`
+    (scan→CAT/MCOMP, LST asc/desc, fingerprint change/stale, interning dedup, window
+    slides, player e2e with prefetch firing during playback, reopen-by-CJK-path)
+- [ ] **Milestone 5** FLAC decode via Symphonia (desktop end-to-end) — `app-core/src/decoder.rs`, real duration/tag parsing from FLAC STREAMINFO / MP3 headers written back into catalog records, reopen-by-chain, **music-file streaming through `file_manager_task`** (sole FS owner; request mechanism TBD — see **Audio Pipeline**), host end-to-end test
 - [ ] **Milestone 6** Audio mocks — `MockFileReader`/`MockAudioOutput` in `app-core/src/hal/mock.rs` (traits exist in `hal.rs`)
 - [ ] **Milestone 7** Hardware bringup (STM32 boot, LED blink, RTT logs)
 - [ ] **Milestone 8** AK4377 I2C init + SAI sine wave
