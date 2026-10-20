@@ -1,6 +1,10 @@
 use alloc::boxed::Box;
 
-use crate::{playlist::Playlist, track::Track, ui::screen_names::ScreenName};
+use crate::{
+    playlist::{Playlist, SortOrder},
+    track::Track,
+    ui::screen_names::ScreenName,
+};
 
 const QUEUE_LENGTH: usize = 8;
 pub type EventQueue = heapless::Vec<Event, QUEUE_LENGTH>;
@@ -58,6 +62,7 @@ pub enum Screen {
 #[derive(Clone)]
 pub enum Fetch {
     Playlist {
+        sort_order: SortOrder,
         start_index: usize,
         end_index: usize,
     },
