@@ -76,6 +76,7 @@ so UI code can be developed and tested without hardware.
 | Component | Part | Notes |
 |---|---|---|
 | Microcontroller | STM32H7A3VI (LQFP100) | Cortex-M7 @ 280MHz, 2MB Flash, 1.4MB SRAM |
+| Display | TBD (monochrome) | 240×240 is a placeholder; Gray8 UI; framebuffer provisionally budgeted (see Memory Layout) |
 | DAC / Amp | AK4377AECB | Controlled via I2C; audio streamed via SAI (I2S-compatible) |
 | Storage | SD card (exFAT) | Connected via SDMMC peripheral (4-bit mode, 3.3V) |
 | Debug probe | ST-LINK V3 / CMSIS-DAP | SWD interface, RTT logging via probe-rs |
@@ -368,9 +369,20 @@ Approximate runtime memory budget:
 | AXISRAM | Symphonia heap (`embedded-alloc`) | 64KB |
 | AXISRAM | PCM double-buffer (DMA) | ~32KB |
 | DTCM | Embassy + task stacks | ~64KB |
+| SRAM1 | Display framebuffer — 240×240 Gray8 full-frame (**provisional**, display not yet chosen) | ~57.6KB |
 | AXISRAM | `FileManager`/`Library` state + `FileSystem` slot cache (N=8 × 512B) + `Deque<Track,16>` window (16 × ~520B) | ~13KB |
 | AXISRAM | LST build sort buffer `Vec<Track, CAP=256>` (~520B/entry) | ~148KB, boot-transient only |
 | AXISRAM | DFS walk buffers (765B name buf, ~4KB path prefix, on the file_manager_task stack) | ~5KB, boot-transient only |
+
+**Display framebuffer (provisional estimate):** a full 240×240 Gray8 frame is
+57.6KB — the safe upper bound matching the `DrawTarget<Color = Gray8>` rule, so the
+UI code's colour model carries to firmware unchanged. SRAM1 (64KB, otherwise
+unbudgeted) hosts it with ~6KB spare; AXISRAM is the fallback (steady-state usage
+is ~109KB of 1024KB). Alternatives once the panel is chosen: a 1bpp buffer (7.2KB,
+needs draw-time or flush-time conversion) or line/window streaming (~0 RAM,
+controller-dependent). No double-buffer — the retained-mode UI redraws on event
+only. Final placement also depends on the display controller's DMA paths (DTCM is
+excluded for DMA, rule 4; SRAM1/AXISRAM are both reachable).
 
 The static `PubSubChannel<Event, 64>` stays small: `State::TrackChanged(Option<Box<Track>>)`
 and `Command::UpdatePlaylist(Box<Playlist>)` box the big payloads, so each slot is a few
