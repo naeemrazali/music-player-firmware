@@ -1,8 +1,11 @@
+mod track_list;
+
 use alloc::boxed::Box;
 use heapless::String;
 
 use crate::{
     event::{Command, Event, EventHandler, EventQueue, Fetch},
+    file_manager::track_list::TrackList,
     playlist::{Playlist, SortOrder},
 };
 
@@ -41,13 +44,8 @@ impl FileManager {
         // add event update playlist with new playlist
 
         let playlist = Playlist::new();
+        let track_list = TrackList::new(sort_order);
 
         self.add_event(Event::Player(Command::UpdatePlaylist(Box::new(playlist))));
-    }
-
-    fn fetch_track(sort_order: SortOrder, index: usize) {
-        // check if sorted list according to sort order exists in root folder
-        // open sorted list
-        // find extract the index from the softed list
     }
 }

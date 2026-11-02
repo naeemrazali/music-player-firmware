@@ -1,12 +1,12 @@
 use crate::playlist::SortOrder;
 
 #[derive(Default)]
-struct SortedList {
+pub struct TrackList {
     sort_order: SortOrder,
     filepath: &'static str,
 }
 
-impl SortedList {
+impl TrackList {
     pub fn new(sort_order: SortOrder) -> Self {
         Self {
             sort_order,
@@ -15,5 +15,10 @@ impl SortedList {
                 SortOrder::ArtistAscending | SortOrder::ArtistDescending => "AASC.LST",
             },
         }
+    }
+
+    pub fn fetch_track(&mut self, index: usize) {
+        // open self.filepath
+        // check index < num items (from reading the header of the file)
     }
 }
