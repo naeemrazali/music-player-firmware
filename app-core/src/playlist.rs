@@ -4,8 +4,9 @@ use crate::track::Track;
 
 const MAX_TRACKS: usize = 16;
 
-#[derive(Clone, Copy)]
+#[derive(Default, Clone, Copy)]
 pub enum SortOrder {
+    #[default]
     TitleAscending,
     TitleDescending,
     ArtistAscending,
