@@ -11,8 +11,8 @@ impl TrackList {
         Self {
             sort_order,
             filepath: match sort_order {
-                SortOrder::TitleAscending | SortOrder::TitleDescending => "TASC.LST",
-                SortOrder::ArtistAscending | SortOrder::ArtistDescending => "AASC.LST",
+                SortOrder::TitleAscending | SortOrder::TitleDescending => "\\TASC.LST",
+                SortOrder::ArtistAscending | SortOrder::ArtistDescending => "\\AASC.LST",
             },
         }
     }
