@@ -1,3 +1,4 @@
+mod filesystem_io;
 mod track_list;
 
 use alloc::boxed::Box;
