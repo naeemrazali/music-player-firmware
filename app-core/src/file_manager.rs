@@ -1,4 +1,5 @@
 use alloc::boxed::Box;
+use heapless::String;
 
 use crate::{
     event::{Command, Event, EventHandler, EventQueue, Fetch},
@@ -30,11 +31,27 @@ impl EventHandler for FileManager {
 impl FileManager {
     fn fetch_playlist(&mut self, sort_order: SortOrder, start_index: usize, end_index: usize) {
         // create an empty playlist
+        //
+        // open sorted list
+        // check if sorted list exists
+        // if does not exist return early
+        //
         // for start to end index read sorted list
         // add new item from sorted list to playlist
         // add event update playlist with new playlist
 
         let playlist = Playlist::new();
+
         self.add_event(Event::Player(Command::UpdatePlaylist(Box::new(playlist))));
+    }
+
+    fn fetch_track(sort_order: SortOrder, index: usize) {
+        // check if sorted list according to sort order exists in root folder
+        // open sorted list
+        // find extract the index from the softed list
+    }
+
+    fn get_list_filename(sort_order: SortOrder) -> &'static str {
+        "placeholder"
     }
 }
