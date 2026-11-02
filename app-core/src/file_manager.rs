@@ -50,8 +50,4 @@ impl FileManager {
         // open sorted list
         // find extract the index from the softed list
     }
-
-    fn get_list_filename(sort_order: SortOrder) -> &'static str {
-        "placeholder"
-    }
 }
