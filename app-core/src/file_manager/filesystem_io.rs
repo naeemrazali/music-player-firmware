@@ -1,10 +1,22 @@
 use exfat_slim::asynchronous::{
-    BlockDevice, error::ExFatError, file::OpenOptions, file_system::FileSystem,
+    BlockDevice,
+    error::ExFatError,
+    file::{File, OpenOptions},
+    file_system::FileSystem,
 };
 
 pub enum FsError {
     NotFound,
     Io,
+}
+
+pub async fn open_read<D: BlockDevice<512>, const N: usize>(
+    fs: &mut FileSystem<D, 512, N>,
+    path: &str,
+) -> Result<File, FsError> {
+    fs.open(path, OpenOptions::new().read(true))
+        .await
+        .map_err(exfat_err_to_fs_err)
 }
 
 pub async fn read_at<D: BlockDevice<512>, const N: usize>(
@@ -13,16 +25,7 @@ pub async fn read_at<D: BlockDevice<512>, const N: usize>(
     offset: u64,
     buf: &mut [u8],
 ) -> Result<(), FsError> {
-    // open file
-    //
-    // seek to offset
-    //
-    // read file
-    //
-    let mut file = fs
-        .open(path, OpenOptions::new().read(true))
-        .await
-        .map_err(exfat_err_to_fs_err)?;
+    let mut file = open_read(fs, path).await?;
 
     file.seek(fs, offset).await.map_err(exfat_err_to_fs_err)?;
     let n = file.read(fs, buf).await.map_err(exfat_err_to_fs_err)?;
