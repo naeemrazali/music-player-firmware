@@ -745,6 +745,30 @@ sample consumption rather than a simulated timer.
   over embassy-stm32 SDMMC **plus MBR type-0x07 partition-offset translation**
 - [ ] **Milestone 10** Combine file read and play song on AK4377
 
+---
+
+## Error-Handling & Robustness TODOs (deferred — happy-path-first policy)
+
+M4 builds the architecture assuming well-formed private files and a present card:
+error detection is deliberately deferred so the fetch path lands end-to-end first.
+Gaps are marked `// TODO(...)` in code and tracked here. Close these before M5
+leans on the same paths. The boot fingerprint rebuild is the main safety net until
+then — a stale generation self-heals on the next scan — but a torn or garbage file
+decoding nonsense mid-session is **not** detected until items 1–3 land.
+
+| # | Gap | Where | Planned fix |
+|---|---|---|---|
+| 1 | LST header not validated — no magic `"MLST"` + version check; a stale generation decodes a garbage `num_items` | `TrackList::Header::parse` (`track_list.rs`) | `parse` becomes fallible ⇒ dedicated `Corrupt` variant ⇒ treated like a stale file (boot rebuild) |
+| 2 | `index >= num_items` maps to `FsError::Io` | `TrackList::fetch_track_index` | dedicated `OutOfRange` variant (range clamping stays in `fetch_playlist`) |
+| 3 | EOF-mid-fill / seek-past-EOF flattened into `Io` | `filesystem_io::read_at` | split out `Truncated` |
+| 4 | `FsError` drops the device error detail | `filesystem_io::exfat_err_to_fs_err` | optional `code: u32` when defmt logging lands (M7+) |
+| 5 | CAT / MCOMP header + truncation checks (`24 + count×len == file_len`) | catalog reader (Stage 3) | same pattern as LST; rule 10 version bumps |
+| 6 | Boot-scan skip accounting (`skipped_count`, unreadable entries) | `Library::open_or_build` (Stage 3) | per skip-policies design |
+| 7 | Card removal / swap at runtime (NoCard ⇒ unmount; remount ⇒ fingerprint rescan) | `FileManager` (M9) | `Option<FileSystem>` + device recovery via `unmount(self) -> D`; mount stays eager at task start |
+| 8 | Reopen-path bounds (chain ≤ 16 components, ~4KB path budget) | M5 decoder reopen | per skip-policies design |
+| 9 | Fetch failure ⇒ player/UI behaviour (partial window, "no library" state, retry) | `fetch_playlist` / Player apply logic | graceful degradation states |
+
+---
 
 ## Running Common Tasks
 
