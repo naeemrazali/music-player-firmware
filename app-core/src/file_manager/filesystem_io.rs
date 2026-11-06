@@ -21,12 +21,10 @@ pub async fn open_read<D: BlockDevice<512>, const N: usize>(
 
 pub async fn read_at<D: BlockDevice<512>, const N: usize>(
     fs: &mut FileSystem<D, 512, N>,
-    path: &str,
+    file: &mut File,
     offset: u64,
     buf: &mut [u8],
 ) -> Result<(), FsError> {
-    let mut file = open_read(fs, path).await?;
-
     file.seek(fs, offset).await.map_err(exfat_err_to_fs_err)?;
     let n = file.read(fs, buf).await.map_err(exfat_err_to_fs_err)?;
     match n {
