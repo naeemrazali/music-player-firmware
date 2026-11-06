@@ -46,6 +46,9 @@ impl FileManager {
         // add new item from sorted list to playlist
         // add event update playlist with new playlist
 
+        // TODO(m4): sort-order semantics live here — Descending inversion
+        // (num_items - 1 - logical), end-of-library clamping, and the open-once
+        // header read; TrackList::fetch_track_index takes physical indices only
         let playlist = Playlist::new();
         self.track_list = TrackList::new(sort_order);
 

@@ -27,6 +27,7 @@ pub async fn read_at<D: BlockDevice<512>, const N: usize>(
 ) -> Result<(), FsError> {
     file.seek(fs, offset).await.map_err(exfat_err_to_fs_err)?;
     let n = file.read(fs, buf).await.map_err(exfat_err_to_fs_err)?;
+    // TODO(errors): split Truncated (EOF mid-fill / SeekOutOfRange) out of Io
     match n {
         Some(n) if n == buf.len() => Ok(()),
         _ => Err(FsError::Io),
