@@ -36,7 +36,7 @@ impl TrackList {
         index: u32,
     ) -> Result<u32, FsError> {
         let mut file = open_read(fs, self.filepath).await?;
-        let mut header = Header::new();
+        let mut header = Header::default();
 
         read_at(fs, &mut file, 0, &mut header.raw_buffer).await?;
         header.parse();
@@ -66,13 +66,6 @@ struct Header {
 }
 
 impl Header {
-    fn new() -> Self {
-        Self {
-            raw_buffer: [0u8; HEADER_SIZE_BYTES],
-            ..Default::default()
-        }
-    }
-
     fn parse(&mut self) {
         let mut byte_offset = 0;
         self.magic_number = parse_u32_le(&self.raw_buffer, byte_offset);
