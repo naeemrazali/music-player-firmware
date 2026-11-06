@@ -47,6 +47,7 @@ impl FileManager {
         // add event update playlist with new playlist
 
         let playlist = Playlist::new();
+        self.track_list = TrackList::new(sort_order);
 
         self.add_event(Event::Player(Command::UpdatePlaylist(Box::new(playlist))));
     }
