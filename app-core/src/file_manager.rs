@@ -1,7 +1,8 @@
-mod filesystem_io;
-mod track_list;
+pub mod filesystem_io;
+pub mod track_list;
 
 use alloc::boxed::Box;
+use exfat_slim::asynchronous::file_system::FileSystem;
 use heapless::String;
 
 use crate::{

@@ -1,7 +1,7 @@
-use exfat_slim::asynchronous::{BlockDevice, file_system::FileSystem};
+use exfat_slim::asynchronous::BlockDevice;
 
 use crate::{
-    file_manager::filesystem_io::{FsError, open_read, read_at},
+    file_manager::filesystem_io::{Fs, FsError, SD_BLOCK_SIZE, open_read, read_at},
     playlist::SortOrder,
 };
 
@@ -30,9 +30,9 @@ impl TrackList {
         }
     }
 
-    pub async fn fetch_track_index<D: BlockDevice<512>, const N: usize>(
+    pub async fn fetch_track_index<D: BlockDevice<SD_BLOCK_SIZE>>(
         &mut self,
-        fs: &mut FileSystem<D, 512, N>,
+        fs: &mut Fs<D>,
         index: u32,
     ) -> Result<u32, FsError> {
         let mut file = open_read(fs, self.filepath).await?;
