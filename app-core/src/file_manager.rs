@@ -11,6 +11,7 @@ use crate::{
     event::{Command, Event, EventHandler, EventQueue, Fetch},
     file_manager::{
         filesystem_io::{Fs, SD_BLOCK_SIZE},
+        music_catalogue::MusicCatalogue,
         track_list::TrackList,
     },
     playlist::{Playlist, SortOrder},
@@ -20,6 +21,7 @@ pub struct FileManager<D: BlockDevice<SD_BLOCK_SIZE>> {
     events: EventQueue,
     fs: Fs<D>,
     track_list: TrackList,
+    music_catalogue: MusicCatalogue,
 }
 
 impl<D: BlockDevice<SD_BLOCK_SIZE>> EventHandler for FileManager<D> {
@@ -46,6 +48,7 @@ impl<D: BlockDevice<SD_BLOCK_SIZE>> FileManager<D> {
             events: EventQueue::new(),
             fs: FileSystem::new(device),
             track_list: TrackList::default(),
+            music_catalogue: MusicCatalogue::new(),
         }
     }
 

@@ -12,6 +12,7 @@ use crate::{
 
 const ENTRY_SIZE_BYTES: usize = 580;
 
+#[derive(Default)]
 pub struct MusicCatalogue {
     filepath: &'static str,
 }
