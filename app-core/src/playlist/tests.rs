@@ -20,7 +20,7 @@ fn empty_playlist_has_no_current() {
 #[test]
 fn single_track_next_and_prev_are_none() {
     let mut p = Playlist::new();
-    p.add(track("A", 1000)).unwrap();
+    p.add_back(track("A", 1000));
     assert_eq!(p.current().unwrap().title, "A");
     assert!(p.next().is_none());
     assert_eq!(p.current().unwrap().title, "A"); // stayed at A
@@ -31,9 +31,9 @@ fn single_track_next_and_prev_are_none() {
 #[test]
 fn multi_track_navigation() {
     let mut p = Playlist::new();
-    p.add(track("A", 1000)).unwrap();
-    p.add(track("B", 2000)).unwrap();
-    p.add(track("C", 3000)).unwrap();
+    p.add_back(track("A", 1000));
+    p.add_back(track("B", 2000));
+    p.add_back(track("C", 3000));
 
     assert_eq!(p.current().unwrap().title, "A");
     assert_eq!(p.next().unwrap().title, "B");
