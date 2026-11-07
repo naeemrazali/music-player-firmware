@@ -48,7 +48,7 @@ impl<D: BlockDevice<SD_BLOCK_SIZE>> FileManager<D> {
             events: EventQueue::new(),
             fs: FileSystem::new(device),
             track_list: TrackList::default(),
-            music_catalogue: MusicCatalogue::new(),
+            music_catalogue: MusicCatalogue::default(),
         }
     }
 
