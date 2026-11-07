@@ -6,7 +6,7 @@ use exfat_slim::asynchronous::{
 };
 
 pub const SD_BLOCK_SIZE: usize = 512;
-pub const CACHE_DEPTH: usize = 8;
+pub const CACHE_DEPTH: usize = 16;
 
 pub type Fs<D> = FileSystem<D, SD_BLOCK_SIZE, CACHE_DEPTH>;
 
