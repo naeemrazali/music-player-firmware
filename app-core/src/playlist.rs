@@ -31,8 +31,15 @@ impl Playlist {
         self.tracks.clone_from(tracks);
     }
 
-    pub fn add(&mut self, track: Track) -> Result<(), ()> {
-        self.tracks.push_back(track).map_err(|_| ())
+    pub fn add_back(&mut self, track: Track) {
+        // check if there is capacity to add track
+        // if no capacity pop front
+        // push_back
+        if self.tracks.is_full() {
+            self.tracks.pop_front();
+        }
+        // TODO handle the result (error)
+        self.tracks.push_back(track);
     }
 
     pub fn current(&self) -> Option<&Track> {
