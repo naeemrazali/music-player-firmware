@@ -32,14 +32,19 @@ impl Playlist {
     }
 
     pub fn add_back(&mut self, track: Track) {
-        // check if there is capacity to add track
-        // if no capacity pop front
-        // push_back
         if self.tracks.is_full() {
             self.tracks.pop_front();
         }
-        // TODO handle the result (error)
+        // TODO(errors) handle the result
         self.tracks.push_back(track);
+    }
+
+    pub fn add_front(&mut self, track: Track) {
+        if self.tracks.is_full() {
+            self.tracks.pop_back();
+        }
+        // TODO(errors) handle result
+        self.tracks.push_front(track);
     }
 
     pub fn current(&self) -> Option<&Track> {
