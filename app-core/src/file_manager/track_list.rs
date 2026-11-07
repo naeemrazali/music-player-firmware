@@ -1,11 +1,10 @@
-use core::default;
-
 use exfat_slim::asynchronous::BlockDevice;
 
+use crate::file_manager::helpers::U32Buf;
 use crate::{
     file_manager::{
         filesystem_io::{Fs, FsError, SD_BLOCK_SIZE, open_read, read_at},
-        header::{HEADER_SIZE_BYTES, Header, HeaderBuf, U32Buf},
+        header::{HEADER_SIZE_BYTES, Header, HeaderBuf},
     },
     playlist::SortOrder,
 };

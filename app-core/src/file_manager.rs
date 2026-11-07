@@ -1,5 +1,6 @@
 pub mod filesystem_io;
 pub mod header;
+pub mod helpers;
 pub mod music_catalogue;
 pub mod track_list;
 
