@@ -5,7 +5,7 @@ use exfat_slim::asynchronous::BlockDevice;
 use crate::{
     file_manager::{
         filesystem_io::{Fs, FsError, SD_BLOCK_SIZE, open_read, read_at},
-        header::{HEADER_SIZE_BYTES, Header, U32Buf},
+        header::{HEADER_SIZE_BYTES, Header, HeaderBuf, U32Buf},
     },
     playlist::SortOrder,
 };
@@ -35,7 +35,7 @@ impl TrackList {
         index: u32,
     ) -> Result<u32, FsError> {
         let mut file = open_read(fs, self.filepath).await?;
-        let mut header_buf = <[u8; HEADER_SIZE_BYTES]>::default();
+        let mut header_buf = HeaderBuf::default();
 
         read_at(fs, &mut file, 0, &mut header_buf).await?;
         let header = Header::parse(&header_buf);
