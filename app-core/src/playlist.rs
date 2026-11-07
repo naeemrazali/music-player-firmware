@@ -47,11 +47,11 @@ impl Playlist {
         self.tracks.push_front(track);
     }
 
-    pub fn current(&self) -> Option<&Track> {
-        self.tracks.get(self.current_index)
+    pub fn current(&self) -> Option<Track> {
+        self.tracks.get(self.current_index).cloned()
     }
 
-    pub fn prev(&mut self) -> Option<&Track> {
+    pub fn prev(&mut self) -> Option<Track> {
         if self.current_index > 0 {
             self.current_index -= 1;
             self.current()
@@ -67,7 +67,7 @@ impl Iterator for Playlist {
     fn next(&mut self) -> Option<Self::Item> {
         if self.current_index + 1 < self.tracks.len() {
             self.current_index += 1;
-            self.current().cloned()
+            self.current()
         } else {
             None
         }
