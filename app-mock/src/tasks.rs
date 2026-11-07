@@ -49,7 +49,7 @@ impl<T: EventHandler> Task<T> {
     }
 
     async fn service_event(&mut self, event: &Event) {
-        for event in self.handler.handle_event(event) {
+        for event in self.handler.handle_event(event).await {
             self.publisher.publish(event).await;
         }
     }

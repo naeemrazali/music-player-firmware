@@ -11,7 +11,7 @@ pub type EventQueue = heapless::Vec<Event, QUEUE_LENGTH>;
 
 pub trait EventHandler {
     fn event_queue(&mut self) -> &mut EventQueue;
-    fn handle_event(&mut self, event: &Event) -> EventQueue;
+    async fn handle_event(&mut self, event: &Event) -> EventQueue;
     fn push_events(&mut self) -> EventQueue {
         let mut events = heapless::Vec::new();
         core::mem::swap(self.event_queue(), &mut events);

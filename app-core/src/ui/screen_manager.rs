@@ -30,16 +30,16 @@ impl EventHandler for ScreenManager {
         }
     }
 
-    fn handle_event(&mut self, event: &Event) -> EventQueue {
+    async fn handle_event(&mut self, event: &Event) -> EventQueue {
         match event {
             Event::Ui(Screen::Change(screen)) => {
                 self.current_screen = *screen;
                 heapless::Vec::new()
             }
-            Event::Playback(_) => self.main.handle_event(event),
+            Event::Playback(_) => self.main.handle_event(event).await,
             _ => match self.current_screen {
-                ScreenName::Main => self.main.handle_event(event),
-                ScreenName::Settings => self.settings.handle_event(event),
+                ScreenName::Main => self.main.handle_event(event).await,
+                ScreenName::Settings => self.settings.handle_event(event).await,
             },
         }
     }

@@ -25,7 +25,7 @@ impl EventHandler for MainScreen {
         &mut self.events
     }
 
-    fn handle_event(&mut self, event: &Event) -> EventQueue {
+    async fn handle_event(&mut self, event: &Event) -> EventQueue {
         match event {
             Event::ButtonPress(Button::Play) => {
                 self.add_event(Event::Player(Command::Toggle));

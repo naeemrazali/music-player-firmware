@@ -20,7 +20,7 @@ impl EventHandler for SettingsScreen {
         &mut self.events
     }
 
-    fn handle_event(&mut self, event: &Event) -> heapless::Vec<Event, 8> {
+    async fn handle_event(&mut self, event: &Event) -> heapless::Vec<Event, 8> {
         if let Event::ButtonPress(Button::Menu) = event {
             self.add_event(Event::Ui(Screen::Change(ScreenName::Main)));
             self.add_event(Event::Ui(Screen::Refresh));
