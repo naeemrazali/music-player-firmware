@@ -1,10 +1,7 @@
+use crate::file_manager::helpers::{U32_BYTES, parse_u32_le, parse_u64_le};
+
 pub const HEADER_SIZE_BYTES: usize = 24;
 
-const U32_BYTES: usize = 4;
-const U64_BYTES: usize = 8;
-
-pub type U32Buf = [u8; U32_BYTES];
-pub type U64Buf = [u8; U64_BYTES];
 pub type HeaderBuf = [u8; HEADER_SIZE_BYTES];
 
 #[derive(Default)]
@@ -33,16 +30,4 @@ impl Header {
     pub fn num_items(&self) -> u32 {
         self.num_items
     }
-}
-
-fn parse_u32_le(buf: &[u8], offset: usize) -> u32 {
-    let mut bytes = U32Buf::default();
-    bytes.copy_from_slice(&buf[offset..offset + U32_BYTES]);
-    u32::from_le_bytes(bytes)
-}
-
-fn parse_u64_le(buf: &[u8], offset: usize) -> u64 {
-    let mut bytes = U64Buf::default();
-    bytes.copy_from_slice(&buf[offset..offset + U64_BYTES]);
-    u64::from_le_bytes(bytes)
 }
