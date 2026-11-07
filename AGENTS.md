@@ -370,7 +370,7 @@ Approximate runtime memory budget:
 | AXISRAM | PCM double-buffer (DMA) | ~32KB |
 | DTCM | Embassy + task stacks | ~64KB |
 | SRAM1 | Display framebuffer — 240×240 Gray8 full-frame (**provisional**, display not yet chosen) | ~57.6KB |
-| AXISRAM | `FileManager`/`Library` state + `FileSystem` sector caches (**3 × N=8 × 512B**: data + FAT + alloc-bitmap) + `Deque<Track,16>` window (16 × ~520B) | ~21KB |
+| AXISRAM | `FileManager`/`Library` state + `FileSystem` sector caches (**3 × N=16 × 512B**: data + FAT + alloc-bitmap) + `Deque<Track,16>` window (16 × ~520B) | ~33KB |
 | AXISRAM | LST build sort buffer `Vec<Track, CAP=256>` (~520B/entry) | ~148KB, boot-transient only |
 | AXISRAM | DFS walk buffers (765B name buf, ~4KB path prefix, on the file_manager_task stack) | ~5KB, boot-transient only |
 
@@ -378,7 +378,7 @@ Approximate runtime memory budget:
 57.6KB — the safe upper bound matching the `DrawTarget<Color = Gray8>` rule, so the
 UI code's colour model carries to firmware unchanged. SRAM1 (64KB, otherwise
 unbudgeted) hosts it with ~6KB spare; AXISRAM is the fallback (steady-state usage
-is ~109KB of 1024KB). Alternatives once the panel is chosen: a 1bpp buffer (7.2KB,
+is ~129KB of 1024KB). Alternatives once the panel is chosen: a 1bpp buffer (7.2KB,
 needs draw-time or flush-time conversion) or line/window streaming (~0 RAM,
 controller-dependent). No double-buffer — the retained-mode UI redraws on event
 only. Final placement also depends on the display controller's DMA paths (DTCM is
@@ -512,7 +512,7 @@ current_index`). `MAX_STRING_LENGTH = 256` drives title/artist/`Label`.
   `BLOCK_SIZE = 512`, slot cache `N = 4`, `type Align = A4` — `ExFatRamBlockDevice`
   mirrors this. The FS holds **three** sector caches of N slots each (data, FAT,
   allocation bitmap) — RAM cost is `N × 3 × 512B`, not `N × 512B`. The README
-  recommends `N = 4` (6KB) for embedded; we pick `N = 8` (12KB) for two-consumer
+  recommends `N = 4` (6KB) for embedded; we pick `N = 16` (24KB) for two-consumer
   headroom (streaming file + list-fetch sectors share the data cache).
 - `mount()` expects the exFAT boot sector at view-sector 0 — adapters must apply the
   MBR partition LBA themselves.
@@ -729,7 +729,7 @@ sample consumption rather than a simulated timer.
     `&mut FileSystem` (boot scan: iterative DFS, streaming CAT/MCOMP rebuild, LST
     load-or-build; `fetch_window(order, start, end)`)
   - **Stage 4 — `FileManager` + task:** `FileManager<B: BlockDevice<512>, N>` owns
-    `FileSystem<B, 512, 8>`; `handle_event_async` services `Fetch::Playlist`;
+    `FileSystem<B, 512, 16>`; `handle_event_async` services `Fetch::Playlist`;
     `file_manager_task`: mount → `Library::open_or_build` → boot fetch `[0,16)` →
     loop; spawn order ui → player → file_manager (see **Event Architecture**)
   - **Stage 5 — sim plumbing:** `tools/make_exfat_image.sh` +
