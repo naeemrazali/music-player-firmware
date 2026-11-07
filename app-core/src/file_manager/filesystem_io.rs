@@ -5,13 +5,18 @@ use exfat_slim::asynchronous::{
     file_system::FileSystem,
 };
 
+pub const SD_BLOCK_SIZE: usize = 512;
+pub const CACHE_DEPTH: usize = 8;
+
+pub type Fs<D> = FileSystem<D, SD_BLOCK_SIZE, CACHE_DEPTH>;
+
 pub enum FsError {
     NotFound,
     Io,
 }
 
-pub async fn open_read<D: BlockDevice<512>, const N: usize>(
-    fs: &mut FileSystem<D, 512, N>,
+pub async fn open_read<D: BlockDevice<SD_BLOCK_SIZE>>(
+    fs: &mut Fs<D>,
     path: &str,
 ) -> Result<File, FsError> {
     fs.open(path, OpenOptions::new().read(true))
@@ -19,8 +24,8 @@ pub async fn open_read<D: BlockDevice<512>, const N: usize>(
         .map_err(exfat_err_to_fs_err)
 }
 
-pub async fn read_at<D: BlockDevice<512>, const N: usize>(
-    fs: &mut FileSystem<D, 512, N>,
+pub async fn read_at<D: BlockDevice<SD_BLOCK_SIZE>>(
+    fs: &mut Fs<D>,
     file: &mut File,
     offset: u64,
     buf: &mut [u8],
