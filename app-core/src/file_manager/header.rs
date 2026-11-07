@@ -5,6 +5,7 @@ const U64_BYTES: usize = 8;
 
 pub type U32Buf = [u8; U32_BYTES];
 pub type U64Buf = [u8; U64_BYTES];
+pub type HeaderBuf = [u8; HEADER_SIZE_BYTES];
 
 #[derive(Default)]
 pub struct Header {
