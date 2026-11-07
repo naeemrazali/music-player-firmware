@@ -2,22 +2,24 @@ pub mod filesystem_io;
 pub mod track_list;
 
 use alloc::boxed::Box;
-use exfat_slim::asynchronous::file_system::FileSystem;
-use heapless::String;
+use exfat_slim::asynchronous::{BlockDevice, file_system::FileSystem};
 
 use crate::{
     event::{Command, Event, EventHandler, EventQueue, Fetch},
-    file_manager::track_list::TrackList,
+    file_manager::{
+        filesystem_io::{Fs, SD_BLOCK_SIZE},
+        track_list::TrackList,
+    },
     playlist::{Playlist, SortOrder},
 };
 
-#[derive(Default)]
-pub struct FileManager {
+pub struct FileManager<D: BlockDevice<SD_BLOCK_SIZE>> {
     events: EventQueue,
+    fs: Fs<D>,
     track_list: TrackList,
 }
 
-impl EventHandler for FileManager {
+impl<D: BlockDevice<SD_BLOCK_SIZE>> EventHandler for FileManager<D> {
     fn event_queue(&mut self) -> &mut EventQueue {
         &mut self.events
     }
@@ -35,7 +37,15 @@ impl EventHandler for FileManager {
     }
 }
 
-impl FileManager {
+impl<D: BlockDevice<SD_BLOCK_SIZE>> FileManager<D> {
+    pub fn new(device: D) -> Self {
+        Self {
+            events: EventQueue::new(),
+            fs: FileSystem::new(device),
+            track_list: TrackList::default(),
+        }
+    }
+
     fn fetch_playlist(&mut self, sort_order: SortOrder, start_index: usize, end_index: usize) {
         // create an empty playlist
         //
