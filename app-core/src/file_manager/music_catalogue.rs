@@ -1,7 +1,10 @@
 use exfat_slim::asynchronous::BlockDevice;
 
 use crate::{
-    file_manager::filesystem_io::{Fs, FsError, SD_BLOCK_SIZE, open_read},
+    file_manager::{
+        filesystem_io::{Fs, FsError, SD_BLOCK_SIZE, open_read, read_at},
+        header::{Header, HeaderBuf},
+    },
     track::Track,
 };
 
@@ -22,6 +25,9 @@ impl MusicCatalogue {
         index: u32,
     ) -> Result<Track, FsError> {
         let mut file = open_read(fs, self.filepath).await?;
-        let mut
+        let mut header_buf = HeaderBuf::default();
+
+        read_at(fs, &mut file, 0, &mut header_buf).await?;
+        let header = Header::parse(header_buf);
     }
 }
