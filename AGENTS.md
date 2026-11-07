@@ -370,7 +370,7 @@ Approximate runtime memory budget:
 | AXISRAM | PCM double-buffer (DMA) | ~32KB |
 | DTCM | Embassy + task stacks | ~64KB |
 | SRAM1 | Display framebuffer — 240×240 Gray8 full-frame (**provisional**, display not yet chosen) | ~57.6KB |
-| AXISRAM | `FileManager`/`Library` state + `FileSystem` slot cache (N=8 × 512B) + `Deque<Track,16>` window (16 × ~520B) | ~13KB |
+| AXISRAM | `FileManager`/`Library` state + `FileSystem` sector caches (**3 × N=8 × 512B**: data + FAT + alloc-bitmap) + `Deque<Track,16>` window (16 × ~520B) | ~21KB |
 | AXISRAM | LST build sort buffer `Vec<Track, CAP=256>` (~520B/entry) | ~148KB, boot-transient only |
 | AXISRAM | DFS walk buffers (765B name buf, ~4KB path prefix, on the file_manager_task stack) | ~5KB, boot-transient only |
 
@@ -510,7 +510,10 @@ current_index`). `MAX_STRING_LENGTH = 256` drives title/artist/`Label`.
 - The async `BlockDevice` trait (re-exported from `block-device-driver`, native AFIT)
   has `type Align: aligned::Alignment`; the crate's own in-memory example device uses
   `BLOCK_SIZE = 512`, slot cache `N = 4`, `type Align = A4` — `ExFatRamBlockDevice`
-  mirrors this (we pick `N = 8` for headroom).
+  mirrors this. The FS holds **three** sector caches of N slots each (data, FAT,
+  allocation bitmap) — RAM cost is `N × 3 × 512B`, not `N × 512B`. The README
+  recommends `N = 4` (6KB) for embedded; we pick `N = 8` (12KB) for two-consumer
+  headroom (streaming file + list-fetch sectors share the data cache).
 - `mount()` expects the exFAT boot sector at view-sector 0 — adapters must apply the
   MBR partition LBA themselves.
 - Known TODOs (accepted risks): reads past `valid_data_length` don't zero-fill (our
