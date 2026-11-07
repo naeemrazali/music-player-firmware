@@ -117,7 +117,7 @@ impl Player {
     }
 
     fn next_track(&mut self) {
-        let track = self.playlist.next().cloned().map(Box::new);
+        let track = self.playlist.next().map(Box::new);
         match track {
             Some(_) => {
                 self.elapsed_ms = 0;

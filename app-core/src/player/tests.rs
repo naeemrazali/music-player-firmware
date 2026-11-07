@@ -13,7 +13,7 @@ fn track(title: &'static str, duration_ms: u32) -> Track {
 fn playlist(tracks: &[(&'static str, u32)]) -> Playlist {
     let mut p = Playlist::new();
     for (title, dur) in tracks {
-        p.add(track(title, *dur)).unwrap();
+        p.add_back(track(title, *dur));
     }
     p
 }
