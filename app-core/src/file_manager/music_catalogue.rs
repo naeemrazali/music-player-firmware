@@ -1,5 +1,3 @@
-use core::clone;
-
 use exfat_slim::asynchronous::BlockDevice;
 use heapless::{String, Vec};
 
@@ -7,7 +5,7 @@ use crate::{
     file_manager::{
         filesystem_io::{Fs, FsError, SD_BLOCK_SIZE, open_read, read_at},
         header::{HEADER_SIZE_BYTES, Header, HeaderBuf},
-        helpers::{U32Buf, parse_u32_le},
+        helpers::parse_u32_le,
     },
     track::{MAX_STRING_LENGTH, Track},
 };
