@@ -16,7 +16,7 @@ impl EventHandler for Player {
         &mut self.events
     }
 
-    fn handle_event(&mut self, event: &Event) -> EventQueue {
+    async fn handle_event(&mut self, event: &Event) -> EventQueue {
         match event {
             Event::Player(Command::Seek(percent)) => self.seek_to(*percent),
             Event::Player(Command::NextTrack) => self.next_track(),
