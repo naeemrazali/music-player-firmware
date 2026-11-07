@@ -64,6 +64,7 @@ impl Playlist {
 impl Iterator for Playlist {
     type Item = Track;
 
+    // TODO(feature) wrap around once actual playlist is empty
     fn next(&mut self) -> Option<Self::Item> {
         if self.current_index + 1 < self.tracks.len() {
             self.current_index += 1;
