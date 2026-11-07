@@ -1,4 +1,5 @@
 pub mod filesystem_io;
+pub mod music_catalogue;
 pub mod track_list;
 
 use alloc::boxed::Box;
