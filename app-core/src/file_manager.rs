@@ -14,8 +14,7 @@ use crate::{
         music_catalogue::MusicCatalogue,
         track_list::TrackList,
     },
-    player::Player,
-    playlist::{self, Playlist, SortOrder},
+    playlist::{Playlist, SortOrder},
 };
 
 pub struct FileManager<D: BlockDevice<SD_BLOCK_SIZE>> {
