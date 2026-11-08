@@ -63,8 +63,9 @@ impl<D: BlockDevice<SD_BLOCK_SIZE>> FileManager<D> {
     ) -> Playlist {
         let mut playlist = Playlist::new();
 
+        // TODO(errors): these can fail init. handle error for future
         self.track_list = TrackList::new(&mut self.fs, sort_order).await;
-        self.music_catalogue = MusicCatalogue::new();
+        self.music_catalogue = MusicCatalogue::new(&mut self.fs).await;
 
         for i in start_index..end_index {
             let Ok(track_index) = self

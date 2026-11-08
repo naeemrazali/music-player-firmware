@@ -53,10 +53,12 @@ impl TrackList {
             read_at(fs, file, offset, &mut entry).await?;
             Ok(u32::from_le_bytes(entry))
         } else {
+            // TODO(errors): better error code?
             Err(FsError::Io)
         }
     }
 
+    // TODO(refactor): make into a shared trait with other custom file type readers
     async fn open<D: BlockDevice<SD_BLOCK_SIZE>>(&mut self, fs: &mut Fs<D>) {
         self.file = open_read(fs, self.filepath).await.ok();
 
@@ -70,10 +72,12 @@ impl TrackList {
         }
     }
 
+    // TODO(refactor): make into a shared trait with other custom file type readers
     fn is_none(&self) -> bool {
         self.file.is_none() | self.header.is_none()
     }
 
+    // TODO(refactor): make into a shared trait with other custom file type readers
     fn num_items(&self) -> u32 {
         if let Some(header) = self.header.as_ref() {
             header.num_items()
