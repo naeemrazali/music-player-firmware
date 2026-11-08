@@ -156,9 +156,8 @@ impl Player {
     }
 
     fn update_playlist(&mut self, playlist: &Option<Box<Playlist>>) {
-        match playlist {
-            Some(playlist) => self.playlist = *playlist.clone(),
-            None => {}
+        if let Some(playlist) = playlist {
+            self.playlist = *playlist.clone()
         }
     }
 }
