@@ -10,7 +10,7 @@ use exfat_slim::asynchronous::{BlockDevice, file_system::FileSystem};
 use crate::{
     event::{Command, Event, EventHandler, EventQueue, Fetch},
     file_manager::{
-        filesystem_io::{Fs, FsError, SD_BLOCK_SIZE},
+        filesystem_io::{Fs, SD_BLOCK_SIZE},
         music_catalogue::MusicCatalogue,
         track_list::TrackList,
     },
