@@ -36,17 +36,12 @@ impl<D: BlockDevice<SD_BLOCK_SIZE>> EventHandler for FileManager<D> {
             end_index,
         }) = event
         {
-            match self
+            let playlist = self
                 .fetch_playlist(*sort_order, *start_index, *end_index)
-                .await
-            {
-                // TODO(functionality): returns empty playlist on any error
-                // might want to return whatever we can parse and leave out the rest
-                Ok(playlist) => self.add_event(Event::Player(Command::UpdatePlaylist(Some(
-                    Box::new(playlist),
-                )))),
-                Err(_) => self.add_event(Event::Player(Command::UpdatePlaylist(None))),
-            }
+                .await;
+            self.add_event(Event::Player(Command::UpdatePlaylist(Some(Box::new(
+                playlist,
+            )))));
         }
         self.push_events()
     }
@@ -67,26 +62,32 @@ impl<D: BlockDevice<SD_BLOCK_SIZE>> FileManager<D> {
         sort_order: SortOrder,
         start_index: usize,
         end_index: usize,
-    ) -> Result<Playlist, FsError> {
+    ) -> Playlist {
         // TODO(m4): sort-order semantics live here — Descending inversion
         // (num_items - 1 - logical), end-of-library clamping, and the open-once
         // header read; TrackList::fetch_track_index takes physical indices only
         let mut playlist = Playlist::new();
-        self.track_list = TrackList::new(sort_order);
+
+        self.track_list = TrackList::new(&mut self.fs, sort_order).await;
         self.music_catalogue = MusicCatalogue::new();
 
         for i in start_index..end_index {
-            let track_index = self
+            let Ok(track_index) = self
                 .track_list
                 .fetch_track_index(&mut self.fs, i as u32)
-                .await?;
-            let track = self
+                .await
+            else {
+                continue;
+            };
+            let Ok(track) = self
                 .music_catalogue
                 .fetch_track(&mut self.fs, track_index)
-                .await?;
+                .await
+            else {
+                continue;
+            };
             playlist.add_back(track);
         }
-
-        Ok(playlist)
+        playlist
     }
 }
