@@ -40,6 +40,8 @@ impl<D: BlockDevice<SD_BLOCK_SIZE>> EventHandler for FileManager<D> {
                 .fetch_playlist(*sort_order, *start_index, *end_index)
                 .await
             {
+                // TODO(functionality): returns empty playlist on any error
+                // might want to return whatever we can parse and leave out the rest
                 Ok(playlist) => self.add_event(Event::Player(Command::UpdatePlaylist(Some(
                     Box::new(playlist),
                 )))),
