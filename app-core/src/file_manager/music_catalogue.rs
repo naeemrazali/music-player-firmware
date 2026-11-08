@@ -1,4 +1,4 @@
-use exfat_slim::asynchronous::BlockDevice;
+use exfat_slim::asynchronous::{BlockDevice, file::File};
 use heapless::{String, Vec};
 
 use crate::{
@@ -15,43 +15,73 @@ const ENTRY_SIZE_BYTES: usize = 580;
 #[derive(Default)]
 pub struct MusicCatalogue {
     filepath: &'static str,
+    file: Option<File>,
+    header: Option<Header>,
 }
 
 impl MusicCatalogue {
-    pub fn new() -> Self {
-        Self {
+    pub async fn new<D: BlockDevice<SD_BLOCK_SIZE>>(fs: &mut Fs<D>) -> Self {
+        let mut catalogue = Self {
             filepath: "\\music.cat",
-        }
+            ..Default::default()
+        };
+        catalogue.open(fs).await;
+        catalogue
     }
 
     pub async fn fetch_track<D: BlockDevice<SD_BLOCK_SIZE>>(
-        &self,
+        &mut self,
         fs: &mut Fs<D>,
         index: u32,
     ) -> Result<Track, FsError> {
-        let mut file = open_read(fs, self.filepath).await?;
-        let mut header_buf = HeaderBuf::default();
-
-        read_at(fs, &mut file, 0, &mut header_buf).await?;
-        let header = Header::parse(&header_buf);
-
-        if index >= header.num_items() {
+        if self.is_none() | (index >= self.num_items()) {
             return Err(FsError::Io);
         }
 
-        let offset = HEADER_SIZE_BYTES as u64 + (ENTRY_SIZE_BYTES as u64 * index as u64);
-        let mut entry = [0u8; ENTRY_SIZE_BYTES];
+        if let Some(file) = self.file.as_mut() {
+            let offset = (HEADER_SIZE_BYTES + (ENTRY_SIZE_BYTES * index as usize)) as u64;
+            let mut entry = [0u8; ENTRY_SIZE_BYTES];
+            read_at(fs, file, offset, &mut entry).await?;
 
-        read_at(fs, &mut file, offset, &mut entry).await?;
+            let track = Track {
+                title: self.parse_title(&entry),
+                artist: self.parse_artist(&entry),
+                duration_ms: self.parse_duration(&entry),
+                index: index as usize,
+            };
+            Ok(track)
+        } else {
+            // TODO(errors): better error code?
+            Err(FsError::Io)
+        }
+    }
 
-        let track = Track {
-            title: self.parse_title(&entry),
-            artist: self.parse_artist(&entry),
-            duration_ms: self.parse_duration(&entry),
-            index: index as usize,
-        };
+    // TODO(refactor): make into a shared trait with other custom file type readers
+    async fn open<D: BlockDevice<SD_BLOCK_SIZE>>(&mut self, fs: &mut Fs<D>) {
+        self.file = open_read(fs, self.filepath).await.ok();
 
-        Ok(track)
+        if let Some(file) = self.file.as_mut() {
+            let mut buf = HeaderBuf::default();
+            // TODO(errors): validate magic "MLST" + version here (stale-generation detection)
+            match read_at(fs, file, 0, &mut buf).await {
+                Ok(_) => self.header = Some(Header::parse(&buf)),
+                Err(_) => self.header = None,
+            }
+        }
+    }
+
+    // TODO(refactor): make into a shared trait with other custom file type readers
+    fn is_none(&self) -> bool {
+        self.file.is_none() | self.header.is_none()
+    }
+
+    // TODO(refactor): make into a shared trait with other custom file type readers
+    fn num_items(&self) -> u32 {
+        if let Some(header) = self.header.as_ref() {
+            header.num_items()
+        } else {
+            u32::default()
+        }
     }
 
     fn parse_title(&self, buf: &[u8]) -> String<MAX_STRING_LENGTH> {
