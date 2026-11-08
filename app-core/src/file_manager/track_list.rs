@@ -1,4 +1,5 @@
 use exfat_slim::asynchronous::BlockDevice;
+use exfat_slim::asynchronous::file::File;
 
 use crate::file_manager::helpers::U32Buf;
 use crate::{
@@ -15,17 +16,23 @@ const ENTRY_SIZE_BYTES: usize = 4;
 pub struct TrackList {
     sort_order: SortOrder,
     filepath: &'static str,
+    file: Option<File>,
+    header: Option<Header>,
 }
 
 impl TrackList {
-    pub fn new(sort_order: SortOrder) -> Self {
-        Self {
+    pub async fn new<D: BlockDevice<SD_BLOCK_SIZE>>(fs: &mut Fs<D>, sort_order: SortOrder) -> Self {
+        let mut track_list = Self {
             sort_order,
             filepath: match sort_order {
                 SortOrder::TitleAscending | SortOrder::TitleDescending => "\\title_asc.LST",
                 SortOrder::ArtistAscending | SortOrder::ArtistDescending => "\\artist_asc.LST",
             },
-        }
+            ..Default::default()
+        };
+
+        track_list.open(fs).await;
+        track_list
     }
 
     pub async fn fetch_track_index<D: BlockDevice<SD_BLOCK_SIZE>>(
@@ -33,22 +40,36 @@ impl TrackList {
         fs: &mut Fs<D>,
         index: u32,
     ) -> Result<u32, FsError> {
-        let mut file = open_read(fs, self.filepath).await?;
-        let mut header_buf = HeaderBuf::default();
-
-        read_at(fs, &mut file, 0, &mut header_buf).await?;
-        let header = Header::parse(&header_buf);
-        // TODO(errors): validate magic "MLST" + version here (stale-generation detection)
-
-        if index >= header.num_items() {
-            // TODO(errors): dedicated OutOfRange variant (currently maps to Io)
+        // TODO(refactor): potentially make this function nicer?
+        if let Some(header) = self.header.as_mut() {
+            if index >= header.num_items() {
+                return Err(FsError::Io);
+            }
+        } else {
             return Err(FsError::Io);
         }
 
-        let offset = HEADER_SIZE_BYTES as u64 + (ENTRY_SIZE_BYTES as u64 * index as u64);
-        let mut entry = U32Buf::default();
+        if let Some(file) = self.file.as_mut() {
+            let offset = (HEADER_SIZE_BYTES + (ENTRY_SIZE_BYTES * index as usize)) as u64;
+            let mut entry = U32Buf::default();
 
-        read_at(fs, &mut file, offset, &mut entry).await?;
-        Ok(u32::from_le_bytes(entry))
+            read_at(fs, file, offset, &mut entry).await?;
+            Ok(u32::from_le_bytes(entry))
+        } else {
+            Err(FsError::Io)
+        }
+    }
+
+    async fn open<D: BlockDevice<SD_BLOCK_SIZE>>(&mut self, fs: &mut Fs<D>) {
+        self.file = open_read(fs, self.filepath).await.ok();
+
+        if let Some(file) = self.file.as_mut() {
+            let mut buf = HeaderBuf::default();
+            // TODO(errors): validate magic "MLST" + version here (stale-generation detection)
+            match read_at(fs, file, 0, &mut buf).await {
+                Ok(_) => self.header = Some(Header::parse(&buf)),
+                Err(_) => self.header = None,
+            }
+        }
     }
 }
