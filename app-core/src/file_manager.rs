@@ -39,9 +39,7 @@ impl<D: BlockDevice<SD_BLOCK_SIZE>> EventHandler for FileManager<D> {
             let playlist = self
                 .fetch_playlist(*sort_order, *start_index, *end_index)
                 .await;
-            self.add_event(Event::Player(Command::UpdatePlaylist(Some(Box::new(
-                playlist,
-            )))));
+            self.add_event(Event::Player(Command::UpdatePlaylist(Box::new(playlist))));
         }
         self.push_events()
     }

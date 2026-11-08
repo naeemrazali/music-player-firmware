@@ -155,10 +155,8 @@ impl Player {
         }
     }
 
-    fn update_playlist(&mut self, playlist: &Option<Box<Playlist>>) {
-        if let Some(playlist) = playlist {
-            self.playlist = *playlist.clone()
-        }
+    fn update_playlist(&mut self, playlist: &Playlist) {
+        self.playlist = playlist.clone();
     }
 }
 

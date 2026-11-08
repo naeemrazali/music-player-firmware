@@ -39,7 +39,7 @@ pub enum Command {
     PreviousTrack,
     Stop,
     Tick(u32),
-    UpdatePlaylist(Option<Box<Playlist>>),
+    UpdatePlaylist(Box<Playlist>),
 }
 
 #[derive(Clone)]
