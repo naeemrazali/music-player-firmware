@@ -40,14 +40,11 @@ impl TrackList {
         fs: &mut Fs<D>,
         index: u32,
     ) -> Result<u32, FsError> {
-        // TODO(refactor): potentially make this function nicer?
-        if let Some(header) = self.header.as_mut() {
-            if index >= header.num_items() {
-                return Err(FsError::Io);
-            }
-        } else {
+        if self.is_none() | (index >= self.num_items()) {
             return Err(FsError::Io);
         }
+
+        let index = self.convert_to_actual(index);
 
         if let Some(file) = self.file.as_mut() {
             let offset = (HEADER_SIZE_BYTES + (ENTRY_SIZE_BYTES * index as usize)) as u64;
@@ -69,6 +66,28 @@ impl TrackList {
             match read_at(fs, file, 0, &mut buf).await {
                 Ok(_) => self.header = Some(Header::parse(&buf)),
                 Err(_) => self.header = None,
+            }
+        }
+    }
+
+    fn is_none(&self) -> bool {
+        self.file.is_none() | self.header.is_none()
+    }
+
+    fn num_items(&self) -> u32 {
+        if let Some(header) = self.header.as_ref() {
+            header.num_items()
+        } else {
+            u32::default()
+        }
+    }
+
+    fn convert_to_actual(&self, index: u32) -> u32 {
+        // TODO(errors): check return values for integer errors?
+        match self.sort_order {
+            SortOrder::TitleAscending | SortOrder::ArtistAscending => index,
+            SortOrder::TitleDescending | SortOrder::ArtistDescending => {
+                self.num_items() - 1 - index
             }
         }
     }
