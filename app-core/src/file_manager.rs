@@ -10,11 +10,12 @@ use exfat_slim::asynchronous::{BlockDevice, file_system::FileSystem};
 use crate::{
     event::{Command, Event, EventHandler, EventQueue, Fetch},
     file_manager::{
-        filesystem_io::{Fs, SD_BLOCK_SIZE},
+        filesystem_io::{Fs, FsError, SD_BLOCK_SIZE},
         music_catalogue::MusicCatalogue,
         track_list::TrackList,
     },
-    playlist::{Playlist, SortOrder},
+    player::Player,
+    playlist::{self, Playlist, SortOrder},
 };
 
 pub struct FileManager<D: BlockDevice<SD_BLOCK_SIZE>> {
@@ -29,14 +30,22 @@ impl<D: BlockDevice<SD_BLOCK_SIZE>> EventHandler for FileManager<D> {
         &mut self.events
     }
 
-    fn handle_event(&mut self, event: &Event) -> EventQueue {
+    async fn handle_event(&mut self, event: &Event) -> EventQueue {
         if let Event::FileManager(Fetch::Playlist {
             sort_order,
             start_index,
             end_index,
         }) = event
         {
-            self.fetch_playlist(*sort_order, *start_index, *end_index);
+            match self
+                .fetch_playlist(*sort_order, *start_index, *end_index)
+                .await
+            {
+                Ok(playlist) => self.add_event(Event::Player(Command::UpdatePlaylist(Some(
+                    Box::new(playlist),
+                )))),
+                Err(_) => self.add_event(Event::Player(Command::UpdatePlaylist(None))),
+            }
         }
         self.push_events()
     }
@@ -52,23 +61,31 @@ impl<D: BlockDevice<SD_BLOCK_SIZE>> FileManager<D> {
         }
     }
 
-    fn fetch_playlist(&mut self, sort_order: SortOrder, start_index: usize, end_index: usize) {
-        // create an empty playlist
-        //
-        // open sorted list
-        // check if sorted list exists
-        // if does not exist return early
-        //
-        // for start to end index read sorted list
-        // add new item from sorted list to playlist
-        // add event update playlist with new playlist
-
+    async fn fetch_playlist(
+        &mut self,
+        sort_order: SortOrder,
+        start_index: usize,
+        end_index: usize,
+    ) -> Result<Playlist, FsError> {
         // TODO(m4): sort-order semantics live here — Descending inversion
         // (num_items - 1 - logical), end-of-library clamping, and the open-once
         // header read; TrackList::fetch_track_index takes physical indices only
-        let playlist = Playlist::new();
+        let mut playlist = Playlist::new();
         self.track_list = TrackList::new(sort_order);
+        self.music_catalogue = MusicCatalogue::new();
 
-        self.add_event(Event::Player(Command::UpdatePlaylist(Box::new(playlist))));
+        for i in start_index..end_index {
+            let track_index = self
+                .track_list
+                .fetch_track_index(&mut self.fs, i as u32)
+                .await?;
+            let track = self
+                .music_catalogue
+                .fetch_track(&mut self.fs, track_index)
+                .await?;
+            playlist.add_back(track);
+        }
+
+        Ok(playlist)
     }
 }
