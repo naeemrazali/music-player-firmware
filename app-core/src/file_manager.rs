@@ -63,9 +63,6 @@ impl<D: BlockDevice<SD_BLOCK_SIZE>> FileManager<D> {
         start_index: usize,
         end_index: usize,
     ) -> Playlist {
-        // TODO(m4): sort-order semantics live here — Descending inversion
-        // (num_items - 1 - logical), end-of-library clamping, and the open-once
-        // header read; TrackList::fetch_track_index takes physical indices only
         let mut playlist = Playlist::new();
 
         self.track_list = TrackList::new(&mut self.fs, sort_order).await;
