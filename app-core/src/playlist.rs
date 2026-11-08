@@ -36,7 +36,7 @@ impl Playlist {
             self.tracks.pop_front();
         }
         // TODO(errors) handle the result
-        self.tracks.push_back(track);
+        let _ = self.tracks.push_back(track);
     }
 
     pub fn add_front(&mut self, track: Track) {
@@ -44,7 +44,7 @@ impl Playlist {
             self.tracks.pop_back();
         }
         // TODO(errors) handle result
-        self.tracks.push_front(track);
+        let _ = self.tracks.push_front(track);
     }
 
     pub fn current(&self) -> Option<Track> {
