@@ -5,7 +5,9 @@ edition = "2024"
 description = "Desktop simulator for the embedded audio player UI"
 
 [dependencies]
+aligned = "0.4.3"
 app-core = { workspace = true }
+block-device-driver = "0.2.0"
 critical-section = { workspace = true, features = ["std"] }
 embassy-executor = { workspace = true, features = [
   "platform-std",
@@ -16,4 +18,5 @@ embassy-sync = { workspace = true }
 embassy-time = { workspace = true, features = ["std"] }
 embedded-graphics = { workspace = true }
 embedded-graphics-simulator = { workspace = true }
+flate2 = "1.1.11"
 heapless = { workspace = true }
