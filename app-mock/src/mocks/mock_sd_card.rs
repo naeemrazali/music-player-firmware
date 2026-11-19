@@ -6,6 +6,10 @@ use flate2::read::GzDecoder;
 
 use app_core::file_manager::filesystem_io::SD_BLOCK_SIZE;
 
+pub fn new() -> MockBlockDevice {
+    MockBlockDevice::new()
+}
+
 pub struct MockBlockDevice {
     bytes: Vec<u8>,
 }
