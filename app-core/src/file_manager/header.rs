@@ -1,5 +1,3 @@
-use heapless::Vec;
-
 use crate::file_manager::helpers::{U32_BYTES, U64_BYTES, parse_u32_le, parse_u64_le};
 
 pub const HEADER_SIZE_BYTES: usize = 24;
