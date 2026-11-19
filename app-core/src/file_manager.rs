@@ -10,7 +10,7 @@ use exfat_slim::asynchronous::{BlockDevice, file_system::FileSystem};
 use crate::{
     event::{Command, Event, EventHandler, EventQueue, Fetch},
     file_manager::{
-        filesystem_io::{Fs, SD_BLOCK_SIZE},
+        filesystem_io::{Fs, FsError, SD_BLOCK_SIZE},
         music_catalogue::MusicCatalogue,
         track_list::TrackList,
     },
@@ -53,6 +53,10 @@ impl<D: BlockDevice<SD_BLOCK_SIZE>> FileManager<D> {
             track_list: TrackList::default(),
             music_catalogue: MusicCatalogue::default(),
         }
+    }
+
+    pub async fn write(&mut self, path: &str, buf: &[u8]) -> Result<(), FsError> {
+        filesystem_io::write(&mut self.fs, path, buf).await
     }
 
     async fn fetch_playlist(
