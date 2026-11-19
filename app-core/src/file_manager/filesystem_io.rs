@@ -39,6 +39,23 @@ pub async fn read_at<D: BlockDevice<SD_BLOCK_SIZE>>(
     }
 }
 
+pub async fn open_write<D: BlockDevice<SD_BLOCK_SIZE>>(
+    fs: &mut Fs<D>,
+    path: &str,
+) -> Result<File, FsError> {
+    fs.open(path, OpenOptions::new().write(true))
+        .await
+        .map_err(exfat_err_to_fs_err)
+}
+
+pub async fn file_write<D: BlockDevice<SD_BLOCK_SIZE>>(
+    fs: &mut Fs<D>,
+    file: &mut File,
+    buf: &[u8],
+) -> Result<(), FsError> {
+    file.write(fs, buf).await.map_err(exfat_err_to_fs_err)
+}
+
 fn exfat_err_to_fs_err<E>(e: ExFatError<E>) -> FsError {
     match e {
         ExFatError::FileNotFound | ExFatError::DirectoryNotFound => FsError::NotFound,
