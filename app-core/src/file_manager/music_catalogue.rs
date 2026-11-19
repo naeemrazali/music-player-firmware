@@ -22,7 +22,7 @@ pub struct MusicCatalogue {
 impl MusicCatalogue {
     pub async fn new<D: BlockDevice<SD_BLOCK_SIZE>>(fs: &mut Fs<D>) -> Self {
         let mut catalogue = Self {
-            filepath: "\\music.cat",
+            filepath: "/music.cat",
             ..Default::default()
         };
         catalogue.open(fs).await;
