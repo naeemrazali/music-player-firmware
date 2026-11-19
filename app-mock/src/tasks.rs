@@ -1,3 +1,4 @@
+pub mod file_task;
 pub mod player_task;
 pub mod ui_task;
 
