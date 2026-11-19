@@ -25,8 +25,8 @@ impl TrackList {
         let mut track_list = Self {
             sort_order,
             filepath: match sort_order {
-                SortOrder::TitleAscending | SortOrder::TitleDescending => "/title_asc.LST",
-                SortOrder::ArtistAscending | SortOrder::ArtistDescending => "/artist_asc.LST",
+                SortOrder::TitleAscending | SortOrder::TitleDescending => "/title_asc.lst",
+                SortOrder::ArtistAscending | SortOrder::ArtistDescending => "/artist_asc.lst",
             },
             ..Default::default()
         };
