@@ -7,7 +7,6 @@ use crate::{
 
 #[embassy_executor::task]
 pub async fn run(event_channel: &'static EventChannel) {
-    // need the device D, which is the mock SD card
     let sd_card = MockBlockDevice::new();
     let mut task = Task::new(FileManager::new(sd_card), event_channel);
 
