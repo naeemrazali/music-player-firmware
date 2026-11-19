@@ -10,6 +10,7 @@ pub const CACHE_DEPTH: usize = 16;
 
 pub type Fs<D> = FileSystem<D, SD_BLOCK_SIZE, CACHE_DEPTH>;
 
+#[derive(Debug)]
 pub enum FsError {
     NotFound,
     Io,

@@ -10,8 +10,8 @@ use embassy_sync::{
 use app_core::event::{Event, EventHandler};
 
 const QUEUE_LENGTH: usize = 64;
-const NUM_PUBLISHERS: usize = 2;
-const NUM_SUBSCRIBERS: usize = 2;
+const NUM_PUBLISHERS: usize = 3;
+const NUM_SUBSCRIBERS: usize = 3;
 
 type ChannelPublisher = Publisher<
     'static,

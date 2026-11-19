@@ -4,7 +4,7 @@ mod tasks;
 use embassy_executor::Spawner;
 use embassy_sync::pubsub::PubSubChannel;
 
-use crate::tasks::{EventChannel, player_task, ui_task};
+use crate::tasks::{EventChannel, file_task, player_task, ui_task};
 
 static EVENTS: EventChannel = PubSubChannel::new();
 
@@ -12,4 +12,5 @@ static EVENTS: EventChannel = PubSubChannel::new();
 async fn main(spawner: Spawner) {
     spawner.spawn(ui_task::run(&EVENTS).unwrap());
     spawner.spawn(player_task::run(&EVENTS).unwrap());
+    spawner.spawn(file_task::run(&EVENTS).unwrap());
 }
