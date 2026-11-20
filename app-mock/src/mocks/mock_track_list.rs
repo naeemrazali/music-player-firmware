@@ -9,7 +9,7 @@ pub fn new() -> [u8; MOCK_TRACK_LIST_BYTES] {
     let magic_number: u32 = 67;
     let version_number: u32 = 1;
     let num_items: u32 = NUM_TRACKS as u32;
-    let hash: u32 = 1234;
+    let hash: u64 = 1234;
     let reserved: u32 = 0;
     let country_roads_index: u32 = 0;
     let idol_index: u32 = 1;
