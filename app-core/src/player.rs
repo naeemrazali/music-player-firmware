@@ -157,6 +157,7 @@ impl Player {
 
     fn update_playlist(&mut self, playlist: &Playlist) {
         self.playlist = playlist.clone();
+        self.elapsed_ms = 0;
         self.current_track();
     }
 }
