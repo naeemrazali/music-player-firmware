@@ -10,7 +10,7 @@ pub fn new() -> [u8; MOCK_MUSIC_CAT_BYTES] {
     let magic_number: u32 = 67;
     let version_number: u32 = 1;
     let num_items: u32 = NUM_ENTRIES as u32;
-    let hash: u32 = 1234;
+    let hash: u64 = 1234;
     let reserved: u32 = 0;
 
     let country_roads_title = null_padded_utf8_buf("Country Roads");
