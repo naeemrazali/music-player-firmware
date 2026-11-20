@@ -29,6 +29,7 @@ pub enum Button {
     Next,
     Prev,
     Seek(u32),
+    ChangePlaylist,
 }
 
 #[derive(Clone)]

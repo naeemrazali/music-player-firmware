@@ -15,19 +15,19 @@ pub fn new() -> [u8; MOCK_MUSIC_CAT_BYTES] {
 
     let country_roads_title = null_padded_utf8_buf("Country Roads");
     let country_roads_artist = null_padded_utf8_buf("John Denver");
-    let country_roads_duration: u32 = 190;
+    let country_roads_duration: u32 = 190000;
 
     let idol_title = null_padded_utf8_buf("Idol");
     let idol_artist = null_padded_utf8_buf("YOASOBI");
-    let idol_duration: u32 = 213;
+    let idol_duration: u32 = 213000;
 
     let dancing_queen_title = null_padded_utf8_buf("Dancing Queen");
     let dancing_queen_artist = null_padded_utf8_buf("ABBA");
-    let dancing_queen_duration: u32 = 230;
+    let dancing_queen_duration: u32 = 230000;
 
     let invisible_title = null_padded_utf8_buf("Invisible");
     let invisible_artist = null_padded_utf8_buf("Duran Duran");
-    let invisible_duration: u32 = 191;
+    let invisible_duration: u32 = 191000;
 
     let file_path = [0u8; 64];
 

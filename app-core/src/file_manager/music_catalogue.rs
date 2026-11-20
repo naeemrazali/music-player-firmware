@@ -95,11 +95,12 @@ impl MusicCatalogue {
 
     fn parse_artist(&self, buf: &[u8]) -> String<MAX_STRING_LENGTH> {
         // TODO(errors): check if buf is long enough
-        let end = buf[MAX_STRING_LENGTH..(MAX_STRING_LENGTH * 2)]
+        let artist = &buf[MAX_STRING_LENGTH..(MAX_STRING_LENGTH * 2)];
+        let end = artist
             .iter()
             .position(|&byte| byte == 0)
             .unwrap_or(MAX_STRING_LENGTH);
-        String::from_utf8(Vec::from_slice(&buf[..end]).unwrap_or_default()).unwrap_or_default()
+        String::from_utf8(Vec::from_slice(&artist[..end]).unwrap_or_default()).unwrap_or_default()
     }
 
     fn parse_duration(&self, buf: &[u8]) -> u32 {
