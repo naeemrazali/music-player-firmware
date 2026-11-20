@@ -24,7 +24,7 @@ pub fn new() -> [u8; MOCK_TRACK_LIST_BYTES] {
     track_list[24..28].copy_from_slice(&country_roads_index.to_le_bytes());
     track_list[28..32].copy_from_slice(&dancing_queen_index.to_le_bytes());
     track_list[32..36].copy_from_slice(&idol_index.to_le_bytes());
-    track_list[36..38].copy_from_slice(&invisible_index.to_le_bytes());
+    track_list[36..40].copy_from_slice(&invisible_index.to_le_bytes());
 
     track_list
 }
