@@ -63,6 +63,7 @@ fn refresh_screen(
 fn map_key(keycode: &Keycode) -> Option<Event> {
     match *keycode {
         Keycode::Space => Some(Event::ButtonPress(Button::Play)),
+        Keycode::L => Some(Event::ButtonPress(Button::ChangePlaylist)),
         Keycode::M => Some(Event::ButtonPress(Button::Menu)),
         Keycode::N => Some(Event::ButtonPress(Button::Next)),
         Keycode::P => Some(Event::ButtonPress(Button::Prev)),

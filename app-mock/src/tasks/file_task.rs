@@ -13,11 +13,11 @@ pub async fn run(event_channel: &'static EventChannel) {
     let sorted_list = mock_track_list::new();
     let music_catalogue = mock_music_catalogue::new();
     file_manager
-        .write("/music.cat", &sorted_list)
+        .write("/title_asc.lst", &sorted_list)
         .await
         .unwrap();
     file_manager
-        .write("/title_asc.lst", &music_catalogue)
+        .write("/music.cat", &music_catalogue)
         .await
         .unwrap();
 

@@ -3,7 +3,8 @@ use embedded_graphics::pixelcolor::Gray8;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::PrimitiveStyle;
 
-use crate::event::{Button, Event, EventHandler, Screen};
+use crate::event::{Button, Event, EventHandler, Fetch, Screen};
+use crate::playlist::SortOrder;
 use crate::ui;
 use crate::ui::screen_names::ScreenName;
 
@@ -21,9 +22,19 @@ impl EventHandler for SettingsScreen {
     }
 
     async fn handle_event(&mut self, event: &Event) -> heapless::Vec<Event, 8> {
-        if let Event::ButtonPress(Button::Menu) = event {
-            self.add_event(Event::Ui(Screen::Change(ScreenName::Main)));
-            self.add_event(Event::Ui(Screen::Refresh));
+        match event {
+            Event::ButtonPress(Button::Menu) => {
+                self.add_event(Event::Ui(Screen::Change(ScreenName::Main)));
+                self.add_event(Event::Ui(Screen::Refresh));
+            }
+            Event::ButtonPress(Button::ChangePlaylist) => {
+                self.add_event(Event::FileManager(Fetch::Playlist {
+                    sort_order: SortOrder::TitleAscending,
+                    start_index: 0,
+                    end_index: 4,
+                }));
+            }
+            _ => (),
         }
         self.push_events()
     }
